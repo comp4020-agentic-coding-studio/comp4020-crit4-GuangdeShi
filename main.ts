@@ -42,7 +42,8 @@ function triggerBonk(singer: HTMLElement) {
 function trigger(singer: HTMLElement) {
   triggerBonk(singer);
   const role = singer.dataset.role as SingerRole | undefined;
-  if (role) playRole(role);
+  const pitch = Number(singer.dataset.pitch);
+  if (role && Number.isFinite(pitch)) playRole(role, pitch);
 }
 
 stage?.addEventListener("click", (event) => {

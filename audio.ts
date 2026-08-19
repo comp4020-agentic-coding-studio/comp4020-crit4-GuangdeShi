@@ -1,9 +1,11 @@
 // Live synthesis for the choir — every voice is built from oscillators,
-// noise, and filters at the moment a singer is hit. No prerecorded audio.
+// noise, and formant-style filters at the moment a singer is hit. No
+// prerecorded audio of any kind, ever.
 import type { SingerRole } from "./singers";
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
+let reverbBus: GainNode | null = null;
 let noiseBuffer: AudioBuffer | null = null;
 
 function getContext(): AudioContext {
@@ -12,19 +14,59 @@ function getContext(): AudioContext {
       window.AudioContext ??
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     ctx = new Ctor();
+
+    // Master bus: a fairly aggressive compressor so a big chord of up to 16
+    // singers can't clip, however many land in the same instant.
     master = ctx.createGain();
-    master.gain.value = 0.8;
+    master.gain.value = 0.65;
     const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.value = -20;
+    compressor.knee.value = 12;
+    compressor.ratio.value = 10;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.22;
     master.connect(compressor);
     compressor.connect(ctx.destination);
+
+    // Shared room ambience: three short feedback delay lines (a
+    // synthesis-only "reverb" — no impulse-response sample involved) that
+    // every voice sends a little signal into, so simultaneous singers sound
+    // like they share a space instead of arriving dry and separate.
+    reverbBus = ctx.createGain();
+    reverbBus.gain.value = 1;
+    for (const delayTime of [0.029, 0.037, 0.053]) {
+      const delay = ctx.createDelay(0.2);
+      delay.delayTime.value = delayTime;
+      const feedback = ctx.createGain();
+      feedback.gain.value = 0.32;
+      const damping = ctx.createBiquadFilter();
+      damping.type = "lowpass";
+      damping.frequency.value = 2200;
+      reverbBus.connect(delay);
+      delay.connect(damping);
+      damping.connect(feedback);
+      feedback.connect(delay);
+      const tap = ctx.createGain();
+      tap.gain.value = 0.4;
+      damping.connect(tap);
+      tap.connect(master);
+    }
   }
   if (ctx.state === "suspended") void ctx.resume();
   return ctx;
 }
 
-function getDestination(): AudioNode {
-  getContext();
-  return master as GainNode;
+// Every voice's final envelope connects here: straight to the master bus
+// (dry) and, faintly, into the shared reverb bus (wet) — never point-blank
+// dry, never drowned in ambience.
+function connectVoice(node: AudioNode, wetAmount: number): GainNode {
+  const context = ctx as AudioContext;
+  node.connect(master as GainNode);
+  const send = context.createGain();
+  send.gain.value = wetAmount;
+  node.connect(send);
+  send.connect(reverbBus as GainNode);
+  return send;
 }
 
 // One shared noise buffer, reused by every noise-based voice — cheap, and
@@ -51,160 +93,279 @@ function shapeGain(gain: GainNode, at: number, attack: number, hold: number, rel
   g.exponentialRampToValueAtTime(0.0001, at + attack + hold + release);
 }
 
-function cleanupOnEnded(node: AudioScheduledSourceNode, ...rest: AudioNode[]) {
-  node.onended = () => {
-    node.disconnect();
-    rest.forEach((n) => n.disconnect());
+function cleanupOnEnded(primary: AudioScheduledSourceNode, ...rest: (AudioNode | null | undefined)[]) {
+  primary.onended = () => {
+    primary.disconnect();
+    rest.forEach((n) => n?.disconnect());
   };
 }
 
-function playBass(context: AudioContext, out: AudioNode) {
+// A gentle vibrato: one shared LFO per voice, feeding the detune of every
+// oscillator passed in. Onset is delayed and faded in, the way a sung note's
+// vibrato settles in after the attack rather than starting cold.
+function addVibrato(
+  context: AudioContext,
+  oscillators: OscillatorNode[],
+  at: number,
+  depthCents: number,
+  rateHz: number,
+  onsetDelay: number,
+): OscillatorNode {
+  const lfo = context.createOscillator();
+  lfo.type = "sine";
+  lfo.frequency.value = rateHz;
+  const depth = context.createGain();
+  depth.gain.setValueAtTime(0, at);
+  depth.gain.setValueAtTime(0, at + onsetDelay);
+  depth.gain.linearRampToValueAtTime(depthCents, at + onsetDelay + 0.15);
+  lfo.connect(depth);
+  oscillators.forEach((osc) => depth.connect(osc.detune));
+  lfo.start(at);
+  return lfo;
+}
+
+interface FormantPair {
+  output: GainNode;
+  nodes: AudioNode[];
+}
+
+// Two parallel bandpass filters tuned to vowel-like formants, summed into
+// one output — this is what gives a buzzy oscillator a human vowel colour
+// instead of a flat synth tone.
+function formants(context: AudioContext, source: AudioNode, f1: number, f2: number, q1: number, q2: number): FormantPair {
+  const output = context.createGain();
+  output.gain.value = 1;
+  const filter1 = context.createBiquadFilter();
+  filter1.type = "bandpass";
+  filter1.frequency.value = f1;
+  filter1.Q.value = q1;
+  const filter2 = context.createBiquadFilter();
+  filter2.type = "bandpass";
+  filter2.frequency.value = f2;
+  filter2.Q.value = q2;
+  source.connect(filter1);
+  source.connect(filter2);
+  filter1.connect(output);
+  filter2.connect(output);
+  return { output, nodes: [filter1, filter2, output] };
+}
+
+// A pair of unison oscillators a few cents apart, mixed together — the
+// subtle detune is what makes a single sustained voice sound like it has
+// width/chorus to it, rather than being a single perfectly flat tone.
+function unison(context: AudioContext, type: OscillatorType, pitch: number, detuneCents: number): { mix: GainNode; oscs: OscillatorNode[] } {
+  const osc1 = context.createOscillator();
+  osc1.type = type;
+  osc1.frequency.value = pitch;
+  const osc2 = context.createOscillator();
+  osc2.type = type;
+  osc2.frequency.value = pitch;
+  osc2.detune.value = detuneCents;
+  const mix = context.createGain();
+  mix.gain.value = 0.5;
+  osc1.connect(mix);
+  osc2.connect(mix);
+  return { mix, oscs: [osc1, osc2] };
+}
+
+// --- Lower: a deep sung "boom", not a vowel — a quick downward pitch dip
+// into a chesty low-passed body. ---
+function playBass(context: AudioContext, pitch: number) {
   const at = context.currentTime;
   const osc = context.createOscillator();
   osc.type = "sine";
-  osc.frequency.setValueAtTime(95, at);
-  osc.frequency.exponentialRampToValueAtTime(52, at + 0.09);
+  osc.frequency.setValueAtTime(pitch * 1.5, at);
+  osc.frequency.exponentialRampToValueAtTime(pitch, at + 0.11);
+  const sub = context.createOscillator();
+  sub.type = "triangle";
+  sub.frequency.value = pitch;
+  sub.detune.value = -8;
   const filter = context.createBiquadFilter();
   filter.type = "lowpass";
-  filter.frequency.value = 250;
+  filter.frequency.value = 320;
+  filter.Q.value = 0.7;
   const gain = context.createGain();
-  shapeGain(gain, at, 0.006, 0.05, 0.28, 0.95);
+  shapeGain(gain, at, 0.008, 0.06, 0.32, 0.9);
   osc.connect(filter);
+  sub.connect(filter);
   filter.connect(gain);
-  gain.connect(out);
+  const lfo = addVibrato(context, [osc, sub], at, 5, 4.5, 0.2);
+  const send = connectVoice(gain, 0.1);
   osc.start(at);
-  osc.stop(at + 0.45);
-  cleanupOnEnded(osc, filter, gain);
-}
-
-function playPercussive(context: AudioContext, out: AudioNode) {
-  const at = context.currentTime;
-  const source = context.createBufferSource();
-  source.buffer = getNoiseBuffer(context);
-  const filter = context.createBiquadFilter();
-  filter.type = "bandpass";
-  filter.frequency.value = 450;
-  filter.Q.value = 0.9;
-  const gain = context.createGain();
-  shapeGain(gain, at, 0.002, 0.01, 0.09, 0.8);
-  source.connect(filter);
-  filter.connect(gain);
-  gain.connect(out);
-  source.start(at);
-  source.stop(at + 0.14);
-  cleanupOnEnded(source, filter, gain);
-}
-
-function playBreathTss(context: AudioContext, out: AudioNode) {
-  const at = context.currentTime;
-  const source = context.createBufferSource();
-  source.buffer = getNoiseBuffer(context);
-  const filter = context.createBiquadFilter();
-  filter.type = "highpass";
-  filter.frequency.value = 4200;
-  const gain = context.createGain();
-  shapeGain(gain, at, 0.015, 0.08, 0.18, 0.4);
-  source.connect(filter);
-  filter.connect(gain);
-  gain.connect(out);
-  source.start(at);
-  source.stop(at + 0.32);
-  cleanupOnEnded(source, filter, gain);
-}
-
-function playHum(context: AudioContext, out: AudioNode) {
-  const at = context.currentTime;
-  const osc = context.createOscillator();
-  osc.type = "sine";
-  osc.frequency.value = 196;
-  const filter = context.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = 700;
-  const gain = context.createGain();
-  shapeGain(gain, at, 0.02, 0.22, 0.32, 0.55);
-  osc.connect(filter);
-  filter.connect(gain);
-  gain.connect(out);
-  osc.start(at);
-  osc.stop(at + 0.62);
-  cleanupOnEnded(osc, filter, gain);
-}
-
-function playOpenAh(context: AudioContext, out: AudioNode) {
-  const at = context.currentTime;
-  const osc = context.createOscillator();
-  osc.type = "sawtooth";
-  osc.frequency.value = 147;
-  const filter = context.createBiquadFilter();
-  filter.type = "bandpass";
-  filter.frequency.value = 750;
-  filter.Q.value = 3;
-  const gain = context.createGain();
-  shapeGain(gain, at, 0.01, 0.14, 0.24, 0.6);
-  osc.connect(filter);
-  filter.connect(gain);
-  gain.connect(out);
-  osc.start(at);
-  osc.stop(at + 0.42);
-  cleanupOnEnded(osc, filter, gain);
-}
-
-function playRoundOoh(context: AudioContext, out: AudioNode) {
-  const at = context.currentTime;
-  const osc = context.createOscillator();
-  osc.type = "triangle";
-  osc.frequency.value = 233;
-  const filter = context.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = 480;
-  const gain = context.createGain();
-  shapeGain(gain, at, 0.015, 0.18, 0.26, 0.55);
-  osc.connect(filter);
-  filter.connect(gain);
-  gain.connect(out);
-  osc.start(at);
+  sub.start(at);
   osc.stop(at + 0.5);
-  cleanupOnEnded(osc, filter, gain);
+  sub.stop(at + 0.5);
+  lfo.stop(at + 0.5);
+  cleanupOnEnded(osc, filter, gain, send, sub, lfo);
 }
 
-function playBrightEe(context: AudioContext, out: AudioNode) {
-  const at = context.currentTime;
-  const osc = context.createOscillator();
-  osc.type = "sawtooth";
-  osc.frequency.value = 349;
-  const filter = context.createBiquadFilter();
-  filter.type = "bandpass";
-  filter.frequency.value = 2400;
-  filter.Q.value = 4;
-  const gain = context.createGain();
-  shapeGain(gain, at, 0.008, 0.1, 0.16, 0.42);
-  osc.connect(filter);
-  filter.connect(gain);
-  gain.connect(out);
-  osc.start(at);
-  osc.stop(at + 0.32);
-  cleanupOnEnded(osc, filter, gain);
-}
-
-function playSoftAiry(context: AudioContext, out: AudioNode) {
+// --- Breath/percussion: a noise "puh" pluck with a soft thump underneath
+// for body. ---
+function playPercussive(context: AudioContext, pitch: number) {
   const at = context.currentTime;
   const source = context.createBufferSource();
   source.buffer = getNoiseBuffer(context);
   const filter = context.createBiquadFilter();
   filter.type = "bandpass";
-  filter.frequency.value = 3000;
-  filter.Q.value = 0.6;
+  filter.frequency.value = pitch;
+  filter.Q.value = 1.1;
+  const thump = context.createOscillator();
+  thump.type = "sine";
+  thump.frequency.setValueAtTime(pitch * 1.4, at);
+  thump.frequency.exponentialRampToValueAtTime(pitch * 0.8, at + 0.06);
+  const mix = context.createGain();
+  mix.gain.value = 1;
+  filter.connect(mix);
+  thump.connect(mix);
   const gain = context.createGain();
-  shapeGain(gain, at, 0.04, 0.1, 0.3, 0.22);
+  shapeGain(gain, at, 0.002, 0.012, 0.1, 0.75);
+  mix.connect(gain);
+  const send = connectVoice(gain, 0.08);
   source.connect(filter);
-  filter.connect(gain);
-  gain.connect(out);
   source.start(at);
-  source.stop(at + 0.45);
-  cleanupOnEnded(source, filter, gain);
+  source.stop(at + 0.16);
+  thump.start(at);
+  thump.stop(at + 0.16);
+  cleanupOnEnded(source, filter, thump, mix, gain, send);
 }
 
-const players: Record<SingerRole, (context: AudioContext, out: AudioNode) => void> = {
+// --- Breath/percussion: an airy "tss" breath — bandpassed rather than raw
+// highpassed noise, so it reads as breath and not as harsh hiss. ---
+function playBreathTss(context: AudioContext, pitch: number) {
+  const at = context.currentTime;
+  const source = context.createBufferSource();
+  source.buffer = getNoiseBuffer(context);
+  const filter = context.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.value = Math.max(pitch * 14, 3200);
+  filter.Q.value = 0.8;
+  const gain = context.createGain();
+  shapeGain(gain, at, 0.018, 0.09, 0.2, 0.34);
+  source.connect(filter);
+  filter.connect(gain);
+  const send = connectVoice(gain, 0.2);
+  source.start(at);
+  source.stop(at + 0.34);
+  cleanupOnEnded(source, filter, gain, send);
+}
+
+// --- Hum: closed-mouth "mmm" — unison sine pair through a single narrow
+// nasal resonance, the way a hum stays fixed around one resonance regardless
+// of the note underneath it. ---
+function playHum(context: AudioContext, pitch: number) {
+  const at = context.currentTime;
+  const { mix, oscs } = unison(context, "sine", pitch, 5);
+  const nasal = context.createBiquadFilter();
+  nasal.type = "bandpass";
+  nasal.frequency.value = Math.min(pitch * 1.8, 320);
+  nasal.Q.value = 4;
+  mix.connect(nasal);
+  const gain = context.createGain();
+  shapeGain(gain, at, 0.03, 0.24, 0.34, 0.5);
+  nasal.connect(gain);
+  const lfo = addVibrato(context, oscs, at, 6, 4.9, 0.25);
+  const send = connectVoice(gain, 0.15);
+  oscs.forEach((o) => o.start(at));
+  oscs.forEach((o) => o.stop(at + 0.66));
+  lfo.stop(at + 0.66);
+  cleanupOnEnded(oscs[0], oscs[1], lfo, mix, nasal, gain, send);
+}
+
+// --- Round: open "ah" — unison sawtooth pair through wide-spaced formants
+// for an open-throated vowel. ---
+function playOpenAh(context: AudioContext, pitch: number) {
+  const at = context.currentTime;
+  const { mix, oscs } = unison(context, "sawtooth", pitch, 9);
+  const formant = formants(context, mix, 700, 1150, 6, 7);
+  const gain = context.createGain();
+  shapeGain(gain, at, 0.02, 0.16, 0.28, 0.55);
+  formant.output.connect(gain);
+  const lfo = addVibrato(context, oscs, at, 9, 5.2, 0.14);
+  const send = connectVoice(gain, 0.14);
+  oscs.forEach((o) => o.start(at));
+  oscs.forEach((o) => o.stop(at + 0.55));
+  lfo.stop(at + 0.55);
+  cleanupOnEnded(oscs[0], oscs[1], lfo, mix, gain, send, ...formant.nodes);
+}
+
+// --- Round: rounded "ooh" — unison triangle pair through narrow low
+// formants, softer and darker than the open "ah". ---
+function playRoundOoh(context: AudioContext, pitch: number) {
+  const at = context.currentTime;
+  const { mix, oscs } = unison(context, "triangle", pitch, 7);
+  const formant = formants(context, mix, 350, 800, 5, 5);
+  const gain = context.createGain();
+  shapeGain(gain, at, 0.03, 0.2, 0.32, 0.5);
+  formant.output.connect(gain);
+  const lfo = addVibrato(context, oscs, at, 7, 4.7, 0.22);
+  const send = connectVoice(gain, 0.16);
+  oscs.forEach((o) => o.start(at));
+  oscs.forEach((o) => o.stop(at + 0.62));
+  lfo.stop(at + 0.62);
+  cleanupOnEnded(oscs[0], oscs[1], lfo, mix, gain, send, ...formant.nodes);
+}
+
+// --- Bright/high: bright "ee" — unison sawtooth pair with a high, sharp
+// second formant for sparkle, and the fastest vibrato onset of the choir. ---
+function playBrightEe(context: AudioContext, pitch: number) {
+  const at = context.currentTime;
+  const { mix, oscs } = unison(context, "sawtooth", pitch, 11);
+  const formant = formants(context, mix, 350, 2600, 5, 9);
+  const gain = context.createGain();
+  shapeGain(gain, at, 0.012, 0.1, 0.18, 0.42);
+  formant.output.connect(gain);
+  const lfo = addVibrato(context, oscs, at, 10, 5.6, 0.1);
+  const send = connectVoice(gain, 0.13);
+  oscs.forEach((o) => o.start(at));
+  oscs.forEach((o) => o.stop(at + 0.36));
+  lfo.stop(at + 0.36);
+  cleanupOnEnded(oscs[0], oscs[1], lfo, mix, gain, send, ...formant.nodes);
+}
+
+// --- Breath/percussion: a breathy "ha" — bandpassed noise with a very soft
+// sine undertone underneath, so it reads as a breathed vowel rather than
+// pure air. ---
+function playSoftAiry(context: AudioContext, pitch: number) {
+  const at = context.currentTime;
+  const source = context.createBufferSource();
+  source.buffer = getNoiseBuffer(context);
+  const filter = context.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.value = Math.max(pitch * 3, 900);
+  filter.Q.value = 0.6;
+  const undertone = context.createOscillator();
+  undertone.type = "sine";
+  undertone.frequency.value = pitch;
+  const undertoneGain = context.createGain();
+  undertoneGain.gain.value = 0.18;
+  undertone.connect(undertoneGain);
+  const mix = context.createGain();
+  mix.gain.value = 1;
+  filter.connect(mix);
+  undertoneGain.connect(mix);
+  const gain = context.createGain();
+  shapeGain(gain, at, 0.05, 0.12, 0.34, 0.22);
+  mix.connect(gain);
+  const send = connectVoice(gain, 0.22);
+  source.connect(filter);
+  source.start(at);
+  source.stop(at + 0.5);
+  undertone.start(at);
+  undertone.stop(at + 0.5);
+  cleanupOnEnded(source, filter, undertone, undertoneGain, mix, gain, send);
+}
+
+// Five named vocal families, each with its own synthesis approach — not
+// eight copies of one oscillator at different pitches:
+//   Lower             — bass:        deep sine+triangle "boom"
+//   Hum               — hum:         closed-mouth "mmm", fixed nasal resonance
+//   Round             — open-ah:     open "ah" vowel, wide-spaced formants
+//                        round-ooh:  rounded "ooh" vowel, narrow low formants
+//   Bright/high       — bright-ee:   bright "ee" vowel, sharp high formant
+//   Breath/percussion — percussive:  noise+thump "puh" pluck
+//                        breath-tss: airy "tss" breath
+//                        soft-airy:  breathy "ha" with a soft vowel undertone
+const players: Record<SingerRole, (context: AudioContext, pitch: number) => void> = {
   bass: playBass,
   percussive: playPercussive,
   "breath-tss": playBreathTss,
@@ -216,8 +377,11 @@ const players: Record<SingerRole, (context: AudioContext, out: AudioNode) => voi
 };
 
 // Creates the AudioContext on first call — always call this from inside a
-// user gesture handler (click/keydown), never at page load.
-export function playRole(role: SingerRole): void {
+// user gesture handler (click/keydown), never at page load. `pitch` comes
+// from the singer's own data (a shared chord-friendly scale — see
+// singers.ts), not from the role, so two singers with the same role still
+// sing different notes.
+export function playRole(role: SingerRole, pitch: number): void {
   const context = getContext();
-  players[role](context, getDestination());
+  players[role](context, pitch);
 }

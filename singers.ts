@@ -17,6 +17,10 @@ export interface Singer {
   label: string; // human-readable role, used in the aria-label
   row: "back" | "middle" | "front";
   x: number; // percent, left position of the singer's center
+  // Hz, drawn from a shared C-major-pentatonic scale (C D E G A across
+  // octaves) — every singer sits on a scale tone, so any combination that
+  // sounds together is consonant by construction. See audio.ts.
+  pitch: number;
   skin: string;
   hair: string;
   clothing: string;
@@ -54,6 +58,7 @@ export const SINGERS: Singer[] = [
     label: "bass, a low boom",
     row: "back",
     x: 10,
+    pitch: 65.41,
     skin: "#e8b48a",
     hair: "#2b2118",
     clothing: "#2f3b52",
@@ -73,6 +78,7 @@ export const SINGERS: Singer[] = [
     label: "a percussive puh",
     row: "middle",
     x: 1,
+    pitch: 146.83,
     skin: "#c98a5e",
     hair: "#caa23a",
     clothing: "#6f5aa8",
@@ -92,6 +98,7 @@ export const SINGERS: Singer[] = [
     label: "a soft tss breath",
     row: "back",
     x: 28,
+    pitch: 196.0,
     skin: "#f0c9a0",
     hair: "#5b4636",
     clothing: "#e2453f",
@@ -111,6 +118,7 @@ export const SINGERS: Singer[] = [
     label: "a warm mmm hum",
     row: "middle",
     x: 19,
+    pitch: 164.81,
     skin: "#8a5a3f",
     hair: "#c9a227",
     clothing: "#fdf6e3",
@@ -130,6 +138,7 @@ export const SINGERS: Singer[] = [
     label: "an open ah tone",
     row: "back",
     x: 46,
+    pitch: 261.63,
     skin: "#7a4a2d",
     hair: "#151015",
     clothing: "#7d8fa3",
@@ -149,6 +158,7 @@ export const SINGERS: Singer[] = [
     label: "a round ooh tone",
     row: "middle",
     x: 37,
+    pitch: 293.66,
     skin: "#e8b48a",
     hair: "#4a3020",
     clothing: "#a9c9d6",
@@ -168,6 +178,7 @@ export const SINGERS: Singer[] = [
     label: "a bright ee tone",
     row: "back",
     x: 64,
+    pitch: 659.25,
     skin: "#f0c9a0",
     hair: "#241c14",
     clothing: "#f6e8ee",
@@ -187,6 +198,7 @@ export const SINGERS: Singer[] = [
     label: "a soft, airy breath",
     row: "middle",
     x: 55,
+    pitch: 392.0,
     skin: "#d9a066",
     hair: "#8a8a8a",
     clothing: "#2f6b52",
@@ -206,6 +218,7 @@ export const SINGERS: Singer[] = [
     label: "bass, a low boom",
     row: "back",
     x: 82,
+    pitch: 98.0,
     skin: "#4a2f1f",
     hair: "#6b2e20",
     clothing: "#e8d84a",
@@ -225,6 +238,7 @@ export const SINGERS: Singer[] = [
     label: "a percussive puh",
     row: "middle",
     x: 73,
+    pitch: 220.0,
     skin: "#f5d7b5",
     hair: "#100c0a",
     clothing: "#3fae7a",
@@ -244,6 +258,7 @@ export const SINGERS: Singer[] = [
     label: "a soft tss breath",
     row: "front",
     x: 10,
+    pitch: 293.66,
     skin: "#e8b48a",
     hair: "#2b2118",
     clothing: "#dbe8f6",
@@ -263,6 +278,7 @@ export const SINGERS: Singer[] = [
     label: "a warm mmm hum",
     row: "middle",
     x: 91,
+    pitch: 220.0,
     skin: "#c98a5e",
     hair: "#6b2e20",
     clothing: "#b06a8a",
@@ -282,6 +298,7 @@ export const SINGERS: Singer[] = [
     label: "an open ah tone",
     row: "front",
     x: 28,
+    pitch: 392.0,
     skin: "#8a5a3f",
     hair: "#151015",
     clothing: "#e26b6b",
@@ -301,6 +318,7 @@ export const SINGERS: Singer[] = [
     label: "a round ooh tone",
     row: "front",
     x: 46,
+    pitch: 440.0,
     skin: "#7a4a2d",
     hair: "#caa23a",
     clothing: "#4a7ab0",
@@ -320,6 +338,7 @@ export const SINGERS: Singer[] = [
     label: "a bright ee tone",
     row: "front",
     x: 64,
+    pitch: 880.0,
     skin: "#f0c9a0",
     hair: "#241c14",
     clothing: "#fdf6e3",
@@ -339,6 +358,7 @@ export const SINGERS: Singer[] = [
     label: "a soft, airy breath",
     row: "front",
     x: 82,
+    pitch: 587.33,
     skin: "#d9a066",
     hair: "#4a3020",
     clothing: "#cbb8e0",
@@ -497,6 +517,7 @@ export function renderSinger(s: Singer, index: number): string {
       class="singer singer--${s.row}"
       data-key="${s.key}"
       data-role="${s.role}"
+      data-pitch="${s.pitch}"
       style="left:${s.x}%; z-index:${rowOrder * 10 + index};"
       aria-label="Singer ${s.key}, ${s.label}. Click or press ${s.key} to hear them sing."
     >${svg}</button>`;
