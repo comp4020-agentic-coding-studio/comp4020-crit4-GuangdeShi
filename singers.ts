@@ -47,7 +47,7 @@ export const SINGERS: Singer[] = [
     headRx: 46,
     headRy: 44,
     hairStyle: "buzz",
-    mouthIdle: "M92,196 Q110,202 128,196",
+    mouthIdle: "M92,106 Q110,112 128,106",
     eyeRx: 7,
     eyeRy: 7.5,
     clothingStyle: "crewneck",
@@ -66,7 +66,7 @@ export const SINGERS: Singer[] = [
     headRx: 40,
     headRy: 40,
     hairStyle: "mohawk",
-    mouthIdle: "M96,194 Q110,190 124,194",
+    mouthIdle: "M96,104 Q110,100 124,104",
     eyeRx: 6,
     eyeRy: 7,
     clothingStyle: "hoodie",
@@ -85,7 +85,7 @@ export const SINGERS: Singer[] = [
     headRx: 37,
     headRy: 50,
     hairStyle: "long-straight",
-    mouthIdle: "M98,198 Q110,196 122,198",
+    mouthIdle: "M98,108 Q110,106 122,108",
     eyeRx: 5.5,
     eyeRy: 5,
     clothingStyle: "turtleneck",
@@ -104,7 +104,7 @@ export const SINGERS: Singer[] = [
     headRx: 44,
     headRy: 46,
     hairStyle: "bun",
-    mouthIdle: "M94,198 Q110,204 126,198",
+    mouthIdle: "M94,108 Q110,114 126,108",
     eyeRx: 6.5,
     eyeRy: 6,
     clothingStyle: "cardigan-v",
@@ -123,7 +123,7 @@ export const SINGERS: Singer[] = [
     headRx: 50,
     headRy: 47,
     hairStyle: "afro",
-    mouthIdle: "M90,197 Q110,206 130,197",
+    mouthIdle: "M90,107 Q110,116 130,107",
     eyeRx: 8,
     eyeRy: 8,
     clothingStyle: "striped",
@@ -142,7 +142,7 @@ export const SINGERS: Singer[] = [
     headRx: 33,
     headRy: 54,
     hairStyle: "bob",
-    mouthIdle: "M104,197 a6,5 0 1,0 12,0 a6,5 0 1,0 -12,0",
+    mouthIdle: "M104,107 a6,5 0 1,0 12,0 a6,5 0 1,0 -12,0",
     eyeRx: 6,
     eyeRy: 6.5,
     clothingStyle: "v-sweater",
@@ -161,7 +161,7 @@ export const SINGERS: Singer[] = [
     headRx: 39,
     headRy: 42,
     hairStyle: "ponytail",
-    mouthIdle: "M92,194 Q110,204 128,194",
+    mouthIdle: "M92,104 Q110,114 128,104",
     eyeRx: 6.5,
     eyeRy: 7,
     clothingStyle: "collared",
@@ -180,7 +180,7 @@ export const SINGERS: Singer[] = [
     headRx: 33,
     headRy: 44,
     hairStyle: "pigtails",
-    mouthIdle: "M100,197 Q110,199 120,197",
+    mouthIdle: "M100,107 Q110,109 120,107",
     eyeRx: 5,
     eyeRy: 3.2,
     clothingStyle: "open-cardigan",
@@ -311,7 +311,8 @@ export function renderSinger(s: Singer, index: number): string {
           <ellipse class="eye eye-left" cx="92" cy="80" rx="${s.eyeRx}" ry="${s.eyeRy}"/>
           <ellipse class="eye eye-right" cx="128" cy="80" rx="${s.eyeRx}" ry="${s.eyeRy}"/>
         </g>
-        <path class="mouth" d="${s.mouthIdle}" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <path class="mouth mouth-idle" d="${s.mouthIdle}" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
       </g>
     </svg>`;
 
