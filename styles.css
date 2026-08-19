@@ -7,15 +7,15 @@ body {
   padding: 0;
   font-family: system-ui, sans-serif;
   line-height: 1.6;
-  color: #f4ecdf;
-  background: radial-gradient(ellipse at 50% 20%, #3a2f4d 0%, #201a2e 55%, #14101f 100%);
+  color: #fff2df;
+  background: radial-gradient(ellipse at 50% 15%, #4a2a1f 0%, #241318 55%, #150a0e 100%);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
 a {
-  color: #ffd166;
+  color: #ffb454;
 }
 
 header {
@@ -45,442 +45,193 @@ main {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(0.75rem, 2.5vh, 1.5rem);
-  padding: 1rem;
+  gap: clamp(0.5rem, 2vh, 1.25rem);
+  padding: 0.75rem;
 }
 
-/* The title block: the first thing a stranger reads. Large, warm, and short
-   on purpose — one line of title, one line of invitation, nothing else. It
-   sits directly above the stage so the page reads as a single composition
-   (title, then the thing the title names) rather than a title bar plus an
-   unrelated page below it. */
+/* The title block: short, warm, and directly above the kit so the page
+   reads as one composition rather than a banner over an unrelated stage. */
 .hero {
   text-align: center;
   max-width: min(640px, 92vw);
 }
 
 .hero-title {
+  font-size: clamp(1.8rem, 5vw, 3rem);
   margin: 0;
-  font-size: clamp(2.25rem, 7vw, 4.25rem);
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.05;
-  background: linear-gradient(135deg, #ffe29a 0%, #ffd166 45%, #ff9a76 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 4px 18px rgba(255, 209, 102, 0.25));
+  letter-spacing: 0.02em;
+  color: #ffd27a;
+  text-shadow: 0 2px 0 #7a3b12;
 }
 
 .hero-subtitle {
-  margin: 0.35rem 0 0;
-  font-size: clamp(0.95rem, 2vw, 1.25rem);
-  font-weight: 500;
-  color: rgba(244, 236, 223, 0.78);
+  margin: 0.25rem 0 0;
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
+  opacity: 0.85;
 }
 
-/* The stage: a landscape composition, roughly the feel of a horizontal A4
-   page (1.414:1). Singers are positioned by percentage so the whole choir
-   scales together at any viewport width. */
+/* The kit itself: a fixed-aspect stage that every drum is positioned
+   within as a percentage, so the whole composition scales as one unit
+   from phone to desktop instead of drums drifting apart. */
 #stage {
   position: relative;
-  width: min(1150px, 96vw);
-  aspect-ratio: 1.414 / 1;
-  margin: 0 auto;
-  border-radius: 1.25rem;
-  background:
-    radial-gradient(ellipse at 50% 15%, rgba(255, 209, 102, 0.16) 0%, transparent 55%),
-    linear-gradient(180deg, #2b2140 0%, #1c1730 60%, #120e1e 100%);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-  overflow: visible;
-  touch-action: manipulation;
+  width: min(1100px, 96vw);
+  aspect-ratio: 16 / 9;
 }
 
-#stage.has-hammer-cursor,
-#stage.has-hammer-cursor .singer {
-  cursor: none;
-}
-
-.singer {
+.drum {
   position: absolute;
-  transform: translateX(-50%);
-  background: none;
+  appearance: none;
   border: none;
+  background: none;
   padding: 0;
   margin: 0;
-  display: block;
+  cursor: pointer;
+  width: var(--drum-width, 20%);
+  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.15s ease;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
 }
 
-.singer:hover {
-  transform: translateX(-50%) translateY(-2%) scale(1.03);
+.drum-fig {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
 }
 
-/* Hover is the "come play with me" cue for a mouse/trackpad visitor: the
-   figure brightens (overriding its row's resting dim/shadow filter) and the
-   chest key label lifts out, both readable at a glance before any click. */
-.singer:hover .singer-fig {
-  filter: brightness(1.12) drop-shadow(0 10px 16px rgba(0, 0, 0, 0.5));
-}
-
-.singer:hover .chest-badge {
-  fill: rgba(0, 0, 0, 0.55);
-}
-
-.singer:hover .chest-letter {
-  fill: #fff8e6;
-  stroke: rgba(255, 209, 102, 0.9);
-}
-
-/* A quick radial flash behind the figure on hit — makes the first tap feel
-   like it landed, on top of the existing bounce/eyes/mouth reaction. */
-.singer::after {
-  content: "";
-  position: absolute;
-  inset: -12% -20%;
-  z-index: -1;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 209, 102, 0.55) 0%, rgba(255, 209, 102, 0) 70%);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.singer.is-hit::after {
-  animation: singer-hit-glow 0.45s ease-out;
-}
-
-@keyframes singer-hit-glow {
-  0% {
-    opacity: 0.8;
-    transform: scale(0.6);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.35);
-  }
-}
-
-.singer:focus-visible {
-  outline: 3px solid #ffd166;
+.drum:focus-visible {
+  outline: 3px solid #ffd27a;
   outline-offset: 4px;
   border-radius: 12px;
 }
 
-/* Row width/top are a function of depth only (not per-singer), so they live
-   here rather than in inline styles — that's what lets the mobile media
-   query below override them with normal cascade instead of !important.
-   The gap between back/middle/top and middle/front is sized so a row's
-   chest-letter zone (near the bottom of each figure) never falls inside the
-   row rendered in front of it — the generalised fix for the V1 occlusion
-   bug (2cdf745), now covering three depth layers instead of one lane. */
-.singer--back {
-  width: 13%;
-  top: 4%;
+.key-badge {
+  fill: #1a1310;
+  opacity: 0.82;
 }
 
-.singer--middle {
-  width: 17%;
-  top: 32%;
+.key-label {
+  font: 700 26px/1 system-ui, sans-serif;
+  fill: #ffe9bf;
+  letter-spacing: 0.02em;
 }
 
-.singer--front {
-  width: 19%;
-  top: 60%;
+.drum--kick .key-label {
+  font-size: 20px;
 }
 
-.singer--back .singer-fig {
-  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.35)) brightness(0.94);
+/* --- Hit reactions: each drum family gets a physical response shaped like
+   the real instrument (heads compress, cymbals swing on their stand). --- */
+
+.impact-dot {
+  transition: none;
 }
 
-.singer--middle .singer-fig {
-  filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.4));
+.is-hit .impact-dot {
+  animation: impact-flash 0.22s ease-out;
 }
 
-.singer--front .singer-fig {
-  filter: drop-shadow(0 12px 12px rgba(0, 0, 0, 0.45));
-}
-
-.singer-fig {
-  width: 100%;
-  height: auto;
-  display: block;
-  overflow: visible;
-}
-
-/* A dark chip behind the chest letter, independent of the singer's own
-   clothing colour — without it, a light clothing colour (e.g. the pale pink
-   or cream some singers wear) leaves the white letter fill with almost no
-   contrast against it and the key label becomes unreadable. */
-.chest-badge {
-  fill: rgba(0, 0, 0, 0.32);
-}
-
-.chest-letter {
-  font: 700 34px/1 system-ui, sans-serif;
-  fill: rgba(255, 255, 255, 0.92);
-  paint-order: stroke;
-  stroke: rgba(0, 0, 0, 0.35);
-  stroke-width: 3px;
-}
-
-.eye {
-  fill: #221510;
-}
-
-.eye-highlight {
-  fill: rgba(255, 255, 255, 0.85);
-}
-
-/* Blend rather than a flat fill, so the same warm tone reads as a blush
-   across every skin tone in the palette instead of sitting on top of it. */
-.cheek-blush {
-  fill: #ff8a73;
-  opacity: 0.22;
-  mix-blend-mode: multiply;
-}
-
-/* Prototype visual system (C4 pass 3): only the four singers carrying
-   .singer--v2 use any of this. Eyebrows give the idle face its first real
-   expression; the three-state mouth (idle -> small "o" -> open "ah") and an
-   independent head tilt replace the old instant idle/open swap and rigid
-   whole-figure bounce with something closer to an actual sung phrase. */
-.mouth-o {
-  opacity: 0;
-}
-
-.singer--v2.is-hit .mouth-idle {
-  animation: singer-mouth-idle-out 0.42s ease;
-}
-
-.singer--v2.is-hit .mouth-o {
-  animation: singer-mouth-o-pulse 0.42s ease;
-}
-
-.singer--v2.is-hit .mouth-open {
-  animation: singer-mouth-ah-pulse 0.42s ease;
-}
-
-@keyframes singer-mouth-idle-out {
+@keyframes impact-flash {
   0% {
-    opacity: 1;
+    opacity: 0.9;
   }
-  20%,
   100% {
     opacity: 0;
   }
 }
 
-@keyframes singer-mouth-o-pulse {
-  0%,
-  100% {
-    opacity: 0;
-  }
-  20%,
-  50% {
-    opacity: 1;
-  }
-  65% {
-    opacity: 0;
-  }
-}
-
-@keyframes singer-mouth-ah-pulse {
-  0%,
-  50%,
-  100% {
-    opacity: 0;
-  }
-  65%,
-  90% {
-    opacity: 1;
-  }
-}
-
-.singer--v2.is-hit .head-group {
-  animation: singer-head-sing 0.42s ease;
-  transform-box: fill-box;
-  transform-origin: 50% 85%;
-}
-
-@keyframes singer-head-sing {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  30% {
-    transform: translateY(-3%) rotate(-4deg);
-  }
-  62% {
-    transform: translateY(1%) rotate(3deg);
-  }
-}
-
-/* Idle motion: a slow breathing bob on the whole figure, plus an occasional
-   blink, each singer offset by its own --bob-delay/--blink-delay (set per
-   singer in singers.ts) so sixteen singers don't move in unison — the
-   "someone is standing there, waiting" cue that invites the first tap. */
-.singer-fig {
-  animation: singer-idle-bob 4.6s ease-in-out infinite;
-  animation-delay: var(--bob-delay, 0s);
-}
-
-.eyes {
-  animation: singer-idle-blink 5.4s ease-in-out infinite;
-  animation-delay: var(--blink-delay, 0s);
-}
-
-@keyframes singer-idle-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-1.5%);
-  }
-}
-
-@keyframes singer-idle-blink {
-  0%,
-  92%,
-  100% {
-    transform: scaleY(1);
-  }
-  95% {
-    transform: scaleY(0.12);
-  }
-}
-
-/* Idle: closed/small mouth, eyes at rest. Triggered ("is-hit"): eyes widen,
-   mouth swaps to a wide-open shape, and the whole figure does a quick
-   squash-stretch-recoil bounce, then settles back to idle automatically
-   when the animation ends (see main.ts). */
-.mouth-open {
-  opacity: 0;
-}
-
-.singer.is-hit .mouth-idle {
-  opacity: 0;
-}
-
-.singer.is-hit .mouth-open {
-  opacity: 1;
-}
-
-.eyes {
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.singer.is-hit .eyes {
-  animation: singer-eyes-widen 0.4s ease;
-}
-
-.singer.is-hit .singer-fig {
-  animation: singer-bonk 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
-  transform-box: fill-box;
+/* Membrane drums (kick, snare, toms): the head squashes flatter and the
+   whole body dips, then springs back --- squash and stretch, not a bounce
+   in place. */
+.drum--kick.is-hit .drum-fig,
+.drum--snare.is-hit .drum-fig,
+.drum--tom-high.is-hit .drum-fig,
+.drum--tom-mid.is-hit .drum-fig,
+.drum--tom-floor.is-hit .drum-fig {
+  animation: drum-bonk 0.22s cubic-bezier(0.2, 0.9, 0.3, 1);
   transform-origin: 50% 100%;
 }
 
-@keyframes singer-eyes-widen {
+@keyframes drum-bonk {
   0% {
-    transform: scale(1);
+    transform: scaleY(1) scaleX(1);
   }
-  25% {
-    transform: scale(1.55);
+  30% {
+    transform: scaleY(0.86) scaleX(1.05);
+  }
+  60% {
+    transform: scaleY(1.05) scaleX(0.98);
   }
   100% {
-    transform: scale(1);
+    transform: scaleY(1) scaleX(1);
   }
 }
 
-@keyframes singer-bonk {
+/* Snare gets an extra fast horizontal jitter on top --- the snare wires
+   buzzing against the underside of the head. */
+.drum--snare.is-hit .drum-fig {
+  animation:
+    drum-bonk 0.22s cubic-bezier(0.2, 0.9, 0.3, 1),
+    snare-buzz 0.18s linear;
+}
+
+@keyframes snare-buzz {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  20% {
+    translate: 1.5px 0;
+  }
+  40% {
+    translate: -1.5px 0;
+  }
+  60% {
+    translate: 1px 0;
+  }
+  80% {
+    translate: -1px 0;
+  }
+}
+
+/* Cymbals (crash, ride, hi-hats): a decaying rotational shake, swinging on
+   the stand rather than compressing like a drum head. */
+.drum--crash.is-hit .drum-fig,
+.drum--ride.is-hit .drum-fig,
+.drum--hihat-open.is-hit .drum-fig,
+.drum--hihat-closed.is-hit .drum-fig {
+  animation: cymbal-shake 0.5s ease-out;
+  transform-origin: 50% 100%;
+}
+
+@keyframes cymbal-shake {
   0% {
-    transform: translateY(0) scale(1, 1) rotate(0deg);
+    rotate: 0deg;
   }
-  18% {
-    transform: translateY(3%) scale(1.06, 0.9) rotate(-3deg);
+  15% {
+    rotate: -7deg;
   }
-  45% {
-    transform: translateY(-4%) scale(0.96, 1.07) rotate(2.5deg);
+  35% {
+    rotate: 6deg;
   }
-  70% {
-    transform: translateY(1%) scale(1.02, 0.98) rotate(-1deg);
+  55% {
+    rotate: -4deg;
+  }
+  75% {
+    rotate: 2deg;
   }
   100% {
-    transform: translateY(0) scale(1, 1) rotate(0deg);
+    rotate: 0deg;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .singer.is-hit .eyes,
-  .singer.is-hit .singer-fig,
-  .singer-fig,
-  .eyes,
-  .singer.is-hit::after,
-  .singer--v2.is-hit .mouth-idle,
-  .singer--v2.is-hit .mouth-o,
-  .singer--v2.is-hit .mouth-open,
-  .singer--v2.is-hit .head-group {
-    animation: none;
-  }
-}
-
-/* Cartoon hammer cursor: follows the pointer on devices with a fine
-   pointer (mouse/trackpad); touch and coarse pointers keep native taps. */
-#hammer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 54px;
-  height: 54px;
-  pointer-events: none;
-  transform: translate(-6px, -46px) rotate(-20deg);
-  transform-origin: 20% 85%;
-  opacity: 0;
-  transition: opacity 0.12s ease;
-  z-index: 999;
-  background-repeat: no-repeat;
-  background-size: contain;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='28' y='26' width='8' height='34' rx='3' fill='%238a5a2f'/%3E%3Crect x='10' y='6' width='30' height='20' rx='4' fill='%23b8bec7'/%3E%3Crect x='10' y='6' width='30' height='7' rx='3' fill='%23dde2e8'/%3E%3C/svg%3E");
-  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.55));
-}
-
-#hammer.visible {
-  opacity: 1;
 }
 
 @media (max-width: 640px) {
-  main {
-    padding: 0.5rem;
-    gap: 0.6rem;
+  .key-label {
+    font: 700 20px/1 system-ui, sans-serif;
   }
 
-  .hero-subtitle {
-    margin-top: 0.2rem;
-  }
-
-  /* With 16 singers instead of 8, each row's rendered width shrinks on a
-     narrow phone screen. Rather than removing singers or scrolling, grow
-     each row's share of the stage (and the chest letter, which is sized in
-     the SVG's own viewBox units and so scales with it) so every figure and
-     its key label stay legible at phone width. */
-  .singer--back {
-    width: 17%;
-    top: 2%;
-  }
-
-  .singer--middle {
-    width: 21%;
-    top: 26%;
-  }
-
-  .singer--front {
-    width: 24%;
-    top: 54%;
-  }
-
-  .chest-letter {
-    font: 700 40px/1 system-ui, sans-serif;
+  .drum--kick .key-label {
+    font-size: 16px;
   }
 }

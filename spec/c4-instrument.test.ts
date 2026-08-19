@@ -7,10 +7,24 @@ import { describe, expect, it } from "vitest";
 // (https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/crits/04-instrument/).
 // Lines a person has to judge (does it feel discoverable, does it sound good,
 // is it expressive) are left to the crit — see spec/README.md.
+//
+// This file covers Plan B, "Bash Kit" (branch plan-b-drums): a playable
+// drum kit, not the Plan A choir on main. The drum set differs from the
+// choir's sixteen singers, so the contract below is this instrument's own.
 const DIST = resolve("dist");
 const doc = new JSDOM(readFileSync(join(DIST, "index.html"), "utf8")).window.document;
 
-const KEYS = ["Q", "W", "E", "R", "T", "Y", "U", "I", "A", "S", "D", "F", "G", "H", "J", "K"];
+const DRUM_IDS = [
+  "kick",
+  "snare",
+  "hihat-closed",
+  "hihat-open",
+  "tom-high",
+  "tom-mid",
+  "tom-floor",
+  "crash",
+  "ride",
+];
 
 describe("C4: the browser is the instrument", () => {
   it("ships no prerecorded audio samples", () => {
@@ -37,21 +51,23 @@ describe("C4: the browser is the instrument", () => {
   });
 });
 
-describe("C4: sixteen singers, each keyboard-playable", () => {
-  it("shows exactly one large keyboard letter per singer, matching the suggested mapping", () => {
-    const chestLetters = Array.from(doc.querySelectorAll<HTMLElement>("[data-key]"))
-      .map((el) => el.dataset.key)
-      .filter(Boolean);
-    expect(chestLetters.sort()).toEqual([...KEYS].sort());
+describe("C4: a drum kit, every drum keyboard-playable", () => {
+  it("has every required drum, each with a keyboard mapping shown on the drum", () => {
+    const drums = Array.from(doc.querySelectorAll<HTMLElement>("[data-drum]"));
+    const ids = drums.map((el) => el.dataset.drum).filter(Boolean);
+    expect(ids.sort()).toEqual([...DRUM_IDS].sort());
+    for (const drum of drums) {
+      expect(drum.dataset.key, `drum "${drum.dataset.drum}" needs a keyboard mapping`).toBeTruthy();
+    }
   });
 
-  it("marks every singer as a keyboard focusable, clickable control", () => {
-    const singers = doc.querySelectorAll<HTMLElement>("[data-key]");
-    expect(singers.length).toBeGreaterThan(0);
-    for (const singer of singers) {
+  it("marks every drum as a keyboard focusable, clickable control", () => {
+    const drums = doc.querySelectorAll<HTMLElement>("[data-drum]");
+    expect(drums.length).toBeGreaterThan(0);
+    for (const drum of drums) {
       expect(
-        singer.getAttribute("role") === "button" || singer.tagName === "BUTTON",
-        `singer for key "${singer.dataset.key}" needs a button role so a screen reader and keyboard user can find it`,
+        drum.tagName === "BUTTON" || drum.getAttribute("role") === "button",
+        `drum "${drum.dataset.drum}" needs a button (or role="button") so a screen reader and keyboard user can find it`,
       ).toBe(true);
     }
   });

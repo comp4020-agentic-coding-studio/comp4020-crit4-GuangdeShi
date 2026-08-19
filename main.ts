@@ -1,71 +1,61 @@
-import type { SingerRole } from "./singers";
-import { playRole } from "./audio";
+import type { DrumId } from "./drum-audio";
+import { playDrum } from "./drum-audio";
 
 const stage = document.querySelector<HTMLElement>("#stage");
-const hammer = document.querySelector<HTMLElement>("#hammer");
 
-// The hammer cursor only makes sense for a real pointer; touch and coarse
-// pointers keep their native behaviour (there's nothing to follow).
-const hasFinePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-
-if (stage && hammer && hasFinePointer) {
-  stage.classList.add("has-hammer-cursor");
-  stage.addEventListener("pointermove", (event) => {
-    hammer.style.left = `${event.clientX}px`;
-    hammer.style.top = `${event.clientY}px`;
-  });
-  stage.addEventListener("pointerenter", () => hammer.classList.add("visible"));
-  stage.addEventListener("pointerleave", () => hammer.classList.remove("visible"));
-}
-
-// Every singer's keyboard mapping, keyed exactly as it appears in data-key
-// (so "A".."Z" and ";" all match event.key without further normalising).
-const singersByKey = new Map<string, HTMLElement>();
-document.querySelectorAll<HTMLElement>(".singer").forEach((el) => {
-  const key = el.dataset.key;
-  if (key) singersByKey.set(key, el);
-});
-
-// Retriggering mid-animation forces a reflow so the CSS animation restarts
-// from frame zero instead of being ignored — this is what makes rapid
-// repeated hits (holding a key, clicking fast) look like a fresh bonk each
-// time rather than a single animation that can't be interrupted.
-function triggerBonk(singer: HTMLElement) {
-  singer.classList.remove("is-hit");
-  void singer.offsetWidth;
-  singer.classList.add("is-hit");
-}
-
-// The single entry point for "this singer was hit" — visual reaction and
-// live synthesis fire together, from the same user gesture. This is also
-// where the AudioContext gets created on the very first hit of a session.
-function trigger(singer: HTMLElement) {
-  triggerBonk(singer);
-  const role = singer.dataset.role as SingerRole | undefined;
-  const pitch = Number(singer.dataset.pitch);
-  if (role && Number.isFinite(pitch)) playRole(role, pitch);
-}
-
-stage?.addEventListener("click", (event) => {
-  const singer = (event.target as HTMLElement).closest<HTMLElement>(".singer");
-  if (singer) trigger(singer);
-});
-
-// The animation lives on the inner .singer-fig; listen there and clear the
-// state on the outer button once it finishes.
-stage?.addEventListener("animationend", (event) => {
-  const target = event.target as HTMLElement;
-  if (target.classList.contains("singer-fig")) {
-    target.closest(".singer")?.classList.remove("is-hit");
+// Every drum's keyboard mapping, keyed by event.key (space is stored as
+// "Space" in the markup and normalised to " " below to match the real key).
+const drumsByKey = new Map<string, HTMLElement>();
+document.querySelectorAll<HTMLElement>(".drum").forEach((el) => {
+  const keys = el.dataset.key?.split(",") ?? [];
+  for (const key of keys) {
+    drumsByKey.set(key === "Space" ? " " : key, el);
   }
 });
 
-// Global, not per-button: a singer sings when its letter is pressed
-// regardless of focus, and holding or rapid-repeating a key keeps
-// retriggering it — multiple keys held at once each drive their own singer
-// independently, so several can sound together.
+// Retriggering mid-animation forces a reflow so the CSS animation restarts
+// from frame zero instead of being ignored --- rapid repeated hits (fast
+// clicking, quick alternating keys) each look like a fresh hit.
+function flashVisual(id: DrumId): void {
+  const drum = document.querySelector<HTMLElement>(`.drum[data-drum="${id}"]`);
+  if (!drum) return;
+  drum.classList.remove("is-hit");
+  void drum.offsetWidth;
+  drum.classList.add("is-hit");
+}
+
+// The single entry point for "this drum was hit directly" --- sound and
+// visual reaction fire from the same gesture, at the lowest latency the
+// Web Audio API allows (no scheduling delay). This is also where the
+// AudioContext gets created, on the very first hit of a session.
+function hit(id: DrumId): void {
+  playDrum(id);
+  flashVisual(id);
+}
+
+stage?.addEventListener("click", (event) => {
+  const drum = (event.target as HTMLElement).closest<HTMLElement>(".drum");
+  if (drum?.dataset.drum) hit(drum.dataset.drum as DrumId);
+});
+
+stage?.addEventListener("animationend", (event) => {
+  const target = event.target as HTMLElement;
+  if (target.classList.contains("drum-fig")) {
+    target.closest(".drum")?.classList.remove("is-hit");
+  }
+});
+
+// Global, not per-button: a drum sounds when its key is pressed regardless
+// of focus, and several keys held at once each drive their own drum
+// independently. event.repeat is ignored so holding a key down doesn't turn
+// into an uncontrolled, OS-repeat-rate machine-gun roll --- each physical
+// key press is one deliberate hit; sustained rolls are what the rhythm
+// dials are for.
 window.addEventListener("keydown", (event) => {
-  const key = event.key.length === 1 ? event.key.toUpperCase() : event.key;
-  const singer = singersByKey.get(key);
-  if (singer) trigger(singer);
+  if (event.repeat) return;
+  const drum = drumsByKey.get(event.key);
+  if (drum?.dataset.drum) {
+    event.preventDefault();
+    hit(drum.dataset.drum as DrumId);
+  }
 });
