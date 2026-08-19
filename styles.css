@@ -118,12 +118,17 @@ main {
   stroke-width: 3px;
 }
 
-/* A semicolon's ink is much smaller than a capital letter's at the same
-   font-size (a dot and a tail, not a full cap-height glyph) — it needs to be
-   rendered noticeably larger to read as "a large keyboard letter" like the
-   other seven singers. */
-.chest-letter--semicolon {
-  font-size: 64px;
+/* The ";" chest mark is drawn as SVG shapes, not text (see renderSinger) —
+   the font glyph's comma-tail is too thin against a 3px stroke and reads as
+   a blob rather than a semicolon in some browsers. Shares the same fill and
+   stroke as the text-based chest letters so it matches visually. */
+.chest-letter--semicolon circle,
+.chest-letter--semicolon path {
+  fill: rgba(255, 255, 255, 0.92);
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 3px;
+  stroke-linejoin: round;
 }
 
 .eye {

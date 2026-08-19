@@ -301,7 +301,17 @@ export function renderSinger(s: Singer, index: number): string {
       <g class="body-group">
         <path class="torso" d="${TORSO_D}" fill="${s.clothing}"/>
         ${clothingDetails(s)}
-        <text class="chest-letter${s.key === ";" ? " chest-letter--semicolon" : ""}" x="110" y="222" text-anchor="middle">${s.key === ";" ? ";" : s.key}</text>
+        ${
+          s.key === ";"
+            ? // The font glyph for ";" renders as a near-illegible blob at
+              // chest-letter scale in some browsers (thin comma-tail vs. a
+              // heavy stroke) — hand-drawn so it reads the same everywhere.
+              `<g class="chest-letter chest-letter--semicolon">
+                <circle cx="110" cy="199" r="10"/>
+                <path d="M 100,214 C 122,220 124,238 96,254 C 114,240 110,224 98,216 Z"/>
+              </g>`
+            : `<text class="chest-letter" x="110" y="222" text-anchor="middle">${s.key}</text>`
+        }
       </g>
       <g class="head-group">
         ${hairBack(s)}
