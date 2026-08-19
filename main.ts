@@ -53,7 +53,8 @@ stage?.addEventListener("animationend", (event) => {
 // dials are for.
 window.addEventListener("keydown", (event) => {
   if (event.repeat) return;
-  const drum = drumsByKey.get(event.key);
+  const key = event.key.length === 1 ? event.key.toUpperCase() : event.key;
+  const drum = drumsByKey.get(key === " " ? " " : key);
   if (drum?.dataset.drum) {
     event.preventDefault();
     hit(drum.dataset.drum as DrumId);
