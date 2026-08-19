@@ -42,9 +42,41 @@ header nav a {
 main {
   flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: clamp(0.75rem, 2.5vh, 1.5rem);
   padding: 1rem;
+}
+
+/* The title block: the first thing a stranger reads. Large, warm, and short
+   on purpose — one line of title, one line of invitation, nothing else. It
+   sits directly above the stage so the page reads as a single composition
+   (title, then the thing the title names) rather than a title bar plus an
+   unrelated page below it. */
+.hero {
+  text-align: center;
+  max-width: min(640px, 92vw);
+}
+
+.hero-title {
+  margin: 0;
+  font-size: clamp(2.25rem, 7vw, 4.25rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+  background: linear-gradient(135deg, #ffe29a 0%, #ffd166 45%, #ff9a76 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 4px 18px rgba(255, 209, 102, 0.25));
+}
+
+.hero-subtitle {
+  margin: 0.35rem 0 0;
+  font-size: clamp(0.95rem, 2vw, 1.25rem);
+  font-weight: 500;
+  color: rgba(244, 236, 223, 0.78);
 }
 
 /* The stage: a landscape composition, roughly the feel of a horizontal A4
@@ -246,6 +278,11 @@ main {
 @media (max-width: 640px) {
   main {
     padding: 0.5rem;
+    gap: 0.6rem;
+  }
+
+  .hero-subtitle {
+    margin-top: 0.2rem;
   }
 
   /* With 16 singers instead of 8, each row's rendered width shrinks on a
