@@ -1,16 +1,164 @@
-body {
-  margin: 0;
-  padding: 2rem;
-  font-family: system-ui, sans-serif;
-  line-height: 1.6;
-  color: #1a1a1a;
+:root {
+  color-scheme: dark;
 }
 
-main {
-  max-width: 40rem;
-  margin: 0 auto;
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+  color: #f4ecdf;
+  background: radial-gradient(ellipse at 50% 20%, #3a2f4d 0%, #201a2e 55%, #14101f 100%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 a {
-  color: #0b5fff;
+  color: #ffd166;
+}
+
+header {
+  padding: 0.75rem 1.25rem;
+}
+
+header nav a {
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* The stage: a landscape composition, roughly the feel of a horizontal A4
+   page (1.414:1). Singers are positioned by percentage so the whole choir
+   scales together at any viewport width. */
+#stage {
+  position: relative;
+  width: min(1150px, 96vw);
+  aspect-ratio: 1.414 / 1;
+  margin: 0 auto;
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(ellipse at 50% 15%, rgba(255, 209, 102, 0.16) 0%, transparent 55%),
+    linear-gradient(180deg, #2b2140 0%, #1c1730 60%, #120e1e 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  overflow: visible;
+  touch-action: manipulation;
+}
+
+#stage.has-hammer-cursor,
+#stage.has-hammer-cursor .singer {
+  cursor: none;
+}
+
+.singer {
+  position: absolute;
+  transform: translateX(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: block;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease;
+}
+
+.singer:hover {
+  transform: translateX(-50%) translateY(-2%) scale(1.03);
+}
+
+.singer:focus-visible {
+  outline: 3px solid #ffd166;
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+.singer--back .singer-fig {
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.35)) brightness(0.94);
+}
+
+.singer--middle .singer-fig {
+  filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.4));
+}
+
+.singer--front .singer-fig {
+  filter: drop-shadow(0 12px 12px rgba(0, 0, 0, 0.45));
+}
+
+.singer-fig {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.chest-letter {
+  font: 700 34px/1 system-ui, sans-serif;
+  fill: rgba(255, 255, 255, 0.92);
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.35);
+  stroke-width: 3px;
+}
+
+/* A semicolon's ink is much smaller than a capital letter's at the same
+   font-size (a dot and a tail, not a full cap-height glyph) — it needs to be
+   rendered noticeably larger to read as "a large keyboard letter" like the
+   other seven singers. */
+.chest-letter--semicolon {
+  font-size: 64px;
+}
+
+.eye {
+  fill: #221510;
+}
+
+/* Cartoon hammer cursor: follows the pointer on devices with a fine
+   pointer (mouse/trackpad); touch and coarse pointers keep native taps. */
+#hammer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 54px;
+  height: 54px;
+  pointer-events: none;
+  transform: translate(-6px, -46px) rotate(-20deg);
+  transform-origin: 20% 85%;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  z-index: 999;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='28' y='26' width='8' height='34' rx='3' fill='%238a5a2f'/%3E%3Crect x='10' y='6' width='30' height='20' rx='4' fill='%23b8bec7'/%3E%3Crect x='10' y='6' width='30' height='7' rx='3' fill='%23dde2e8'/%3E%3C/svg%3E");
+}
+
+#hammer.visible {
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  main {
+    padding: 0.5rem;
+  }
+
+  .chest-letter {
+    font: 700 30px/1 system-ui, sans-serif;
+  }
 }
