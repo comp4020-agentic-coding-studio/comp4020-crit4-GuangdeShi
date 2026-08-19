@@ -1,85 +1,65 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
-A reading-guide to how the work came together --- a map to your process, not an
-essay about it. Markers read this file and follow its citations; they don't
-trawl the repo for evidence you didn't point at, so if a moment mattered, cite
-it.
-
-This file is the shape; the course site's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-is the requirement, and its
-[word counts](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#word-counts)
-cover every deliverable.
-
 ## What I built
 
-One paragraph: the thing, and the idea behind it.
+An "A Cappella Crowd Instrument": eight stylised half-body singers staggered
+across a landscape stage, each mapped to one home-row key (`A S D F J K L ;`).
+Clicking, tapping, or pressing a singer's chest letter triggers a cartoon
+"bonk" (eyes widen, mouth pops open, the whole figure recoils and springs
+back) and a live Web Audio voice sounds at the same instant — one distinct
+synthesis role per singer (bass, percussive, breath, hum, and four vowel
+tones), built entirely from oscillators/noise/filters, no prerecorded samples.
+There's no score, no health, no win or fail state: it's an instrument to play
+with, not a game to win.
 
 ## The moments that mattered
 
-Three or four for an assignment; fewer is fine for a weekly prototype. Keep the
-list short so each moment has room to do all four jobs:
+**Layout occlusion, fixed at the system rather than the symptom.** The first
+staggered layout placed back-row singers L and `;` at nearly the same
+horizontal position as middle-row F and K. Depth-based `z-index` meant the
+back row rendered underneath, so those two singers' chest letters were
+completely hidden — invisible in every screenshot until I looked at the full
+stage rather than one singer at a time. Nudging just those two would have
+only relocated the same class of collision the next time a lane needed
+adjusting, so instead I redesigned all eight x-positions as fixed lanes spaced
+at least 12% apart regardless of depth row, which rules out the collision
+structurally.
+[`2cdf745`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-GuangdeShi/commit/2cdf745)
 
-1. **what happened** --- the problem, or the thing that went wrong
-2. **what you did instead of the obvious thing** --- the call you made, and why
-   it beat the obvious one
-3. **how you knew it was right** --- the check you ran, the viewport you looked
-   at, what you read before accepting the diff
-4. **the citation** --- a commit or commit range, a `CLAUDE.md` change, a check
-   that went from red to green, a prompt paired with the commit it produced
+**The idle mouth that was never actually there.** While wiring the bonk
+reaction, I cropped a close-up of one singer's idle state to compare against
+the new open-mouth animation, and realised the curve I'd been reading as a
+"mouth" in every earlier screenshot was the clothing collar — every
+`mouthIdle` path had been authored about 90 SVG units below the head, sitting
+in the torso rather than the face. No singer had ever had a visible idle
+mouth, and nothing automated caught it, since the spec tests check DOM
+structure, not what a rendered SVG path actually looks like. I moved all
+eight mouth paths onto the face rather than just the one I happened to be
+checking, then re-cropped the same singer and the full stage to confirm a
+genuine idle expression was visible.
+[`8422a09`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-GuangdeShi/commit/8422a09)
 
-Jobs 2 and 3 are the ones the repo can't tell a reader on its own, so they're
-where the marks are. The strongest moments are the ones where a correction
-landed in the **harness** --- the standards and checks your work has to satisfy
---- rather than in a retry: a rule added to `CLAUDE.md`, a check wired up, an
-attempt thrown away. Retrying until it passes is the routine case, and changing
-what the work runs against is the skilled one.
+**A semicolon that failed legibility twice, caught by zooming further in.**
+Early on I'd already "fixed" the `;` chest mark once, bumping its font-size
+because the glyph read too small next to the other seven capital letters. A
+later validation pass (after the audio commit) zoomed into a screenshot of
+each chest mark individually, and the `;` at the larger size was still
+unreadable — a blob, not a semicolon, because the font's thin comma-tail
+doesn't survive a 3px stroke at that scale. The earlier fix had solved the
+size problem I'd noticed but not the shape problem I hadn't looked closely
+enough to see. This time I stopped trusting a font glyph at all: I built a
+small standalone HTML page to iterate on a hand-drawn dot-and-comma SVG shape
+at the right scale, screenshotted it in isolation until it clearly read as a
+semicolon, and only then swapped it into the real markup, replacing the text
+element for that one singer.
+[`5534757`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-GuangdeShi/commit/5534757)
 
-Cite each moment as a link whose text is the commit hash or range and whose
-target is this repo's commit or compare URL, so a reader clicks straight to the
-evidence:
-
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
-
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
-
-> the prompt, verbatim
-
-Screenshots are welcome where one carries the verification better than a
-sentence does. Commit the file to this repo and link it with a **relative**
-path, which is what makes it render on GitHub: `![alt text](docs/before.png)`.
-Images don't count towards the word count and don't replace the citation.
-
-### A worked moment, for shape
-
-Delete this section along with the rest of the boilerplate --- it's here to show
-the four jobs in one paragraph, not to be imitated in content.
-
-> The date formatter kept coming back with `toLocaleDateString()` and no locale
-> argument, so the same build rendered differently on my machine and in CI. I'd
-> already re-prompted it twice, which fixed the line but not the habit, so the
-> third time I put the rule in `CLAUDE.md` instead
-> ([`3f9ac21`](https://github.com/YOUR-ORG/YOUR-REPO/commit/3f9ac21)) and added
-> a spec test that fails on a bare `toLocaleDateString`. That's what told me it
-> had actually taken: the test went red against the old code and green against
-> the new, and the next two features it wrote passed it without prompting
-> ([`3f9ac21...b7e0d14`](https://github.com/YOUR-ORG/YOUR-REPO/compare/3f9ac21...b7e0d14)).
-
-## Before you ship
-
-`pnpm check:evidence` verifies your citations resolve to real commits, that a
-reflection entry the marker reads is in `reflections/`, and that your
-`CLAUDE.md` is there --- before a marker ever opens the file. It checks that
-your map is traceable, not that it is good: the marker judges whether your
-small, deliberately chosen set of moments shows real judgement and reflection. A
-green check is not a substitute for that curation.
-
-Images aren't checked: whether one renders is visible the moment you look. Open
-this file on GitHub and look at it before you ship.
+**Verifying the cold-open rule by instrumenting the browser, not just reading
+the code.** `CLAUDE.md` requires the `AudioContext` to exist only after a
+real user gesture, never at page load. Rather than trust that my code
+structure achieved this, I used Playwright to wrap the `AudioContext`
+constructor in a `Proxy` before the page loaded and counted invocations: zero
+before any click, exactly one after the first singer is hit, and still one
+(not eight) after hitting several different singers — confirming the context
+is created lazily and shared, not duplicated per voice.
+[`92bfaa8`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit4-GuangdeShi/commit/92bfaa8)
