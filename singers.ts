@@ -15,7 +15,7 @@ export interface Singer {
   key: string;
   role: SingerRole;
   label: string; // human-readable role, used in the aria-label
-  row: "back" | "middle" | "front";
+  row: "outer" | "mid" | "center";
   x: number; // percent, left position of the singer's center
   // Hz, drawn from a shared C-major-pentatonic scale (C D E G A across
   // octaves) — every singer sits on a scale tone, so any combination that
@@ -52,19 +52,22 @@ export interface Singer {
   browStyle?: "confident" | "soft" | "curious" | "gentle";
 }
 
-// Three staggered depth rows (back/middle/front). Row height and vertical
-// offset are chosen so a row's chest-letter zone (near the bottom of each
-// figure) never falls inside the row in front of it — that's the lesson from
-// the V1 occlusion bug (2cdf745), generalised: separate rows by enough
-// vertical space that head-vs-label collisions can't happen, then let
-// same-row neighbours sit close/slightly overlapping for a crowded feel.
+// Six hero singers in a shallow arc, three depth pairs (outer/mid/center).
+// Unlike the old sixteen-singer crowd — where rows existed mainly to keep
+// tightly-packed figures from overlapping each other's chest-letter zone —
+// six large, well-spaced singers have room to read as an actual arc: outer
+// is furthest back and smallest, center is nearest/largest/most forward.
+// Four of the six carry over an existing visualTier "v2" look (bass, hum,
+// round-ooh, soft-airy); percussive and open-ah are new placeholder art
+// here, using the existing v1 shapes/hairstyles — their real character
+// design happens in Commit 2, alongside every singer's move to v2.
 export const SINGERS: Singer[] = [
   {
-    key: "Q",
+    key: "A",
     role: "bass",
     label: "bass, a low boom",
-    row: "back",
-    x: 10,
+    row: "outer",
+    x: 6,
     pitch: 65.41,
     skin: "#e8b48a",
     hair: "#2b2118",
@@ -82,51 +85,31 @@ export const SINGERS: Singer[] = [
     browStyle: "confident",
   },
   {
-    key: "W",
+    key: "S",
     role: "percussive",
     label: "a percussive puh",
-    row: "middle",
-    x: 1,
-    pitch: 146.83,
-    skin: "#c98a5e",
-    hair: "#caa23a",
-    clothing: "#6f5aa8",
-    clothingAccent: "#503f80",
-    faceShape: "oval",
-    headRx: 37,
-    headRy: 48,
-    hairStyle: "bob",
-    mouthIdle: "M94,103 Q110,99 126,103",
-    eyeRx: 6,
-    eyeRy: 6,
-    clothingStyle: "v-sweater",
-  },
-  {
-    key: "E",
-    role: "breath-tss",
-    label: "a soft tss breath",
-    row: "back",
-    x: 28,
-    pitch: 196.0,
-    skin: "#f0c9a0",
-    hair: "#5b4636",
-    clothing: "#e2453f",
-    clothingAccent: "#a52f2a",
+    row: "mid",
+    x: 22,
+    pitch: 220.0,
+    skin: "#f5d7b5",
+    hair: "#100c0a",
+    clothing: "#3fae7a",
+    clothingAccent: "#2c7d57",
     faceShape: "square",
-    headRx: 38,
-    headRy: 38,
+    headRx: 39,
+    headRy: 39,
     hairStyle: "mohawk",
-    mouthIdle: "M96,107 Q110,105 124,107",
+    mouthIdle: "M95,105 Q110,101 125,105",
     eyeRx: 6,
     eyeRy: 6.5,
     clothingStyle: "hoodie",
   },
   {
-    key: "R",
+    key: "D",
     role: "hum",
     label: "a warm mmm hum",
-    row: "middle",
-    x: 19,
+    row: "center",
+    x: 39,
     pitch: 164.81,
     skin: "#8a5a3f",
     hair: "#c9a227",
@@ -144,79 +127,19 @@ export const SINGERS: Singer[] = [
     browStyle: "soft",
   },
   {
-    key: "T",
+    key: "F",
     role: "open-ah",
     label: "an open ah tone",
-    row: "back",
-    x: 46,
-    pitch: 261.63,
-    skin: "#7a4a2d",
-    hair: "#151015",
-    clothing: "#7d8fa3",
-    clothingAccent: "#5c6b7c",
-    faceShape: "oval",
-    headRx: 37,
-    headRy: 50,
-    hairStyle: "long-straight",
-    mouthIdle: "M88,106 Q110,117 132,106",
-    eyeRx: 8,
-    eyeRy: 7,
-    clothingStyle: "turtleneck",
-  },
-  {
-    key: "Y",
-    role: "round-ooh",
-    label: "a round ooh tone",
-    row: "middle",
-    x: 37,
+    row: "center",
+    x: 61,
     pitch: 293.66,
-    skin: "#e8b48a",
-    hair: "#4a3020",
-    clothing: "#a9c9d6",
-    clothingAccent: "#87acbb",
-    faceShape: "long",
-    headRx: 33,
-    headRy: 54,
-    hairStyle: "pigtails",
-    mouthIdle: "M103,108 a7,6 0 1,0 14,0 a7,6 0 1,0 -14,0",
-    eyeRx: 6,
-    eyeRy: 6.5,
-    clothingStyle: "open-cardigan",
-  },
-  {
-    key: "U",
-    role: "bright-ee",
-    label: "a bright ee tone",
-    row: "back",
-    x: 64,
-    pitch: 659.25,
-    skin: "#f0c9a0",
-    hair: "#241c14",
-    clothing: "#f6e8ee",
-    clothingAccent: "#c97f22",
-    faceShape: "heart",
-    headRx: 42,
-    headRy: 48,
-    hairStyle: "bun",
-    mouthIdle: "M90,103 Q110,113 130,103",
-    eyeRx: 6.5,
-    eyeRy: 7,
-    clothingStyle: "cardigan-v",
-  },
-  {
-    key: "I",
-    role: "soft-airy",
-    label: "a soft, airy breath",
-    row: "middle",
-    x: 55,
-    pitch: 392.0,
     skin: "#d9a066",
     hair: "#8a8a8a",
     clothing: "#2f6b52",
     clothingAccent: "#1f4a39",
-    faceShape: "round",
-    headRx: 43,
-    headRy: 41,
+    faceShape: "long",
+    headRx: 36,
+    headRy: 53,
     hairStyle: "flat-top",
     mouthIdle: "M99,106 Q110,108 121,106",
     eyeRx: 7,
@@ -224,111 +147,11 @@ export const SINGERS: Singer[] = [
     clothingStyle: "crewneck",
   },
   {
-    key: "A",
-    role: "bass",
-    label: "bass, a low boom",
-    row: "back",
-    x: 82,
-    pitch: 98.0,
-    skin: "#4a2f1f",
-    hair: "#6b2e20",
-    clothing: "#e8d84a",
-    clothingAccent: "#c2ab2e",
-    faceShape: "long",
-    headRx: 34,
-    headRy: 52,
-    hairStyle: "afro",
-    mouthIdle: "M91,108 Q110,114 129,108",
-    eyeRx: 6,
-    eyeRy: 6.5,
-    clothingStyle: "striped",
-  },
-  {
-    key: "S",
-    role: "percussive",
-    label: "a percussive puh",
-    row: "middle",
-    x: 73,
-    pitch: 220.0,
-    skin: "#f5d7b5",
-    hair: "#100c0a",
-    clothing: "#3fae7a",
-    clothingAccent: "#2c7d57",
-    faceShape: "square",
-    headRx: 39,
-    headRy: 39,
-    hairStyle: "twin-buns",
-    mouthIdle: "M95,105 Q110,101 125,105",
-    eyeRx: 6,
-    eyeRy: 6.5,
-    clothingStyle: "hoodie",
-  },
-  {
-    key: "D",
-    role: "breath-tss",
-    label: "a soft tss breath",
-    row: "front",
-    x: 10,
-    pitch: 293.66,
-    skin: "#e8b48a",
-    hair: "#2b2118",
-    clothing: "#dbe8f6",
-    clothingAccent: "#5a7ab0",
-    faceShape: "heart",
-    headRx: 46,
-    headRy: 48,
-    hairStyle: "mohawk",
-    mouthIdle: "M97,109 Q110,107 123,109",
-    eyeRx: 7,
-    eyeRy: 7.5,
-    clothingStyle: "cardigan-v",
-  },
-  {
-    key: "F",
-    role: "hum",
-    label: "a warm mmm hum",
-    row: "middle",
-    x: 91,
-    pitch: 220.0,
-    skin: "#c98a5e",
-    hair: "#6b2e20",
-    clothing: "#b06a8a",
-    clothingAccent: "#8a4a6b",
-    faceShape: "heart",
-    headRx: 41,
-    headRy: 44,
-    hairStyle: "buzz",
-    mouthIdle: "M93,110 Q110,116 127,110",
-    eyeRx: 6.5,
-    eyeRy: 6,
-    clothingStyle: "turtleneck",
-  },
-  {
     key: "G",
-    role: "open-ah",
-    label: "an open ah tone",
-    row: "front",
-    x: 28,
-    pitch: 392.0,
-    skin: "#8a5a3f",
-    hair: "#151015",
-    clothing: "#e26b6b",
-    clothingAccent: "#a54a4a",
-    faceShape: "round",
-    headRx: 49,
-    headRy: 46,
-    hairStyle: "long-straight",
-    mouthIdle: "M89,109 Q110,118 131,109",
-    eyeRx: 8,
-    eyeRy: 8,
-    clothingStyle: "striped",
-  },
-  {
-    key: "H",
     role: "round-ooh",
     label: "a round ooh tone",
-    row: "front",
-    x: 46,
+    row: "mid",
+    x: 78,
     pitch: 440.0,
     skin: "#7a4a2d",
     hair: "#caa23a",
@@ -346,31 +169,11 @@ export const SINGERS: Singer[] = [
     browStyle: "curious",
   },
   {
-    key: "J",
-    role: "bright-ee",
-    label: "a bright ee tone",
-    row: "front",
-    x: 64,
-    pitch: 880.0,
-    skin: "#f0c9a0",
-    hair: "#241c14",
-    clothing: "#fdf6e3",
-    clothingAccent: "#c9722a",
-    faceShape: "long",
-    headRx: 36,
-    headRy: 53,
-    hairStyle: "afro",
-    mouthIdle: "M91,106 Q110,116 129,106",
-    eyeRx: 7,
-    eyeRy: 7.5,
-    clothingStyle: "collared",
-  },
-  {
-    key: "K",
+    key: "H",
     role: "soft-airy",
     label: "a soft, airy breath",
-    row: "front",
-    x: 82,
+    row: "outer",
+    x: 94,
     pitch: 587.33,
     skin: "#d9a066",
     hair: "#4a3020",
@@ -390,6 +193,50 @@ export const SINGERS: Singer[] = [
 ];
 
 const TORSO_D = "M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z";
+
+// A soft, non-interactive choir behind the six hero singers — enough shapes
+// to read as "a stage full of people," none of them a click/tap target.
+// Each is just the shared torso silhouette plus a plain head, one flat muted
+// colour, no face or clothing detail: interactivity is not just styled away
+// (no .singer class, no data-key, not a <button>, pointer-events: none,
+// aria-hidden) but structurally absent, so main.ts needs no changes at all.
+export interface AtmosphereFigure {
+  x: number; // percent, left position
+  top: number; // percent, vertical position
+  width: number; // percent of stage width
+  color: string;
+}
+
+export const ATMOSPHERE_FIGURES: AtmosphereFigure[] = [
+  { x: -4, top: 6, width: 9, color: "#332440" },
+  { x: 7, top: 2, width: 7, color: "#2a1e35" },
+  { x: 17, top: 9, width: 8, color: "#372a45" },
+  { x: 30, top: 1, width: 6, color: "#2a1e35" },
+  { x: 50, top: 5, width: 7, color: "#332440" },
+  { x: 70, top: 1, width: 6, color: "#2a1e35" },
+  { x: 83, top: 9, width: 8, color: "#372a45" },
+  { x: 93, top: 2, width: 7, color: "#2a1e35" },
+  { x: 104, top: 6, width: 9, color: "#332440" },
+];
+
+export function renderAtmosphereFigure(fig: AtmosphereFigure, index: number): string {
+  const swayDelay = -((index * 0.9) % 6.2).toFixed(2);
+  return `
+    <div
+      class="atmosphere-fig"
+      aria-hidden="true"
+      style="left:${fig.x}%; top:${fig.top}%; width:${fig.width}%; --sway-delay:${swayDelay}s;"
+    >
+      <svg viewBox="0 0 220 262" class="atmosphere-fig-svg">
+        <path d="${TORSO_D}" fill="${fig.color}"/>
+        <circle cx="110" cy="78" r="46" fill="${fig.color}"/>
+      </svg>
+    </div>`;
+}
+
+export function renderAtmosphere(): string {
+  return ATMOSPHERE_FIGURES.map(renderAtmosphereFigure).join("\n");
+}
 
 function hairBack(s: Singer): string {
   switch (s.hairStyle) {
@@ -682,7 +529,7 @@ function renderHeadV2(s: Singer): string {
 }
 
 export function renderSinger(s: Singer, index: number): string {
-  const rowOrder = { back: 1, middle: 2, front: 3 }[s.row];
+  const rowOrder = { outer: 1, mid: 2, center: 3 }[s.row];
 
   // Idle motion (breathing bob, occasional blink) is a shared CSS animation
   // per singer, but every singer starting in phase would read as one robotic

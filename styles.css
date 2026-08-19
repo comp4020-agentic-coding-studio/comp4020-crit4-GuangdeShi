@@ -101,6 +101,42 @@ main {
   cursor: none;
 }
 
+/* Background choir: soft, blurred, non-interactive silhouettes that give the
+   stage depth behind the 6 playable singers, without a class, data-key, or
+   button role of their own — main.ts only ever wires up `.singer`, so this
+   layer needs no script changes to stay inert. */
+.atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.atmosphere-fig {
+  position: absolute;
+  transform: translateX(-50%);
+  filter: blur(1.5px);
+  opacity: 0.55;
+  animation: atmosphere-sway 7s ease-in-out infinite;
+  animation-delay: var(--sway-delay, 0s);
+}
+
+.atmosphere-fig-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+@keyframes atmosphere-sway {
+  0%,
+  100% {
+    transform: translateX(-50%) translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-1%) rotate(0.6deg);
+  }
+}
+
 .singer {
   position: absolute;
   transform: translateX(-50%);
@@ -170,34 +206,34 @@ main {
 /* Row width/top are a function of depth only (not per-singer), so they live
    here rather than in inline styles — that's what lets the mobile media
    query below override them with normal cascade instead of !important.
-   The gap between back/middle/top and middle/front is sized so a row's
-   chest-letter zone (near the bottom of each figure) never falls inside the
-   row rendered in front of it — the generalised fix for the V1 occlusion
-   bug (2cdf745), now covering three depth layers instead of one lane. */
-.singer--back {
-  width: 13%;
-  top: 4%;
+   Six large, well-spaced singers in a shallow arc (outer pair at the ends,
+   set back and smallest; center pair in the middle, forward and largest)
+   don't need the old three-lane occlusion guard — there's room to make
+   every figure itself the focal point instead of hiding overlap. */
+.singer--outer {
+  width: 21%;
+  top: 8%;
 }
 
-.singer--middle {
-  width: 17%;
+.singer--mid {
+  width: 24%;
   top: 32%;
 }
 
-.singer--front {
-  width: 19%;
-  top: 60%;
+.singer--center {
+  width: 27%;
+  top: 55%;
 }
 
-.singer--back .singer-fig {
+.singer--outer .singer-fig {
   filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.35)) brightness(0.94);
 }
 
-.singer--middle .singer-fig {
+.singer--mid .singer-fig {
   filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.4));
 }
 
-.singer--front .singer-fig {
+.singer--center .singer-fig {
   filter: drop-shadow(0 12px 12px rgba(0, 0, 0, 0.45));
 }
 
@@ -421,7 +457,8 @@ main {
   .singer--v2.is-hit .mouth-idle,
   .singer--v2.is-hit .mouth-o,
   .singer--v2.is-hit .mouth-open,
-  .singer--v2.is-hit .head-group {
+  .singer--v2.is-hit .head-group,
+  .atmosphere-fig {
     animation: none;
   }
 }
@@ -432,10 +469,10 @@ main {
   position: fixed;
   top: 0;
   left: 0;
-  width: 54px;
-  height: 54px;
+  width: 72px;
+  height: 72px;
   pointer-events: none;
-  transform: translate(-6px, -46px) rotate(-20deg);
+  transform: translate(-8px, -60px) rotate(-20deg);
   transform-origin: 20% 85%;
   opacity: 0;
   transition: opacity 0.12s ease;
@@ -460,24 +497,23 @@ main {
     margin-top: 0.2rem;
   }
 
-  /* With 16 singers instead of 8, each row's rendered width shrinks on a
-     narrow phone screen. Rather than removing singers or scrolling, grow
-     each row's share of the stage (and the chest letter, which is sized in
-     the SVG's own viewBox units and so scales with it) so every figure and
-     its key label stay legible at phone width. */
-  .singer--back {
-    width: 17%;
-    top: 2%;
+  /* Six singers already read as large on desktop; on a narrow phone screen
+     grow each row's share of the stage a little further (and the chest
+     letter, which is sized in the SVG's own viewBox units and so scales
+     with it) so every figure and its key label stay legible. */
+  .singer--outer {
+    width: 24%;
+    top: 4%;
   }
 
-  .singer--middle {
-    width: 21%;
+  .singer--mid {
+    width: 27%;
     top: 26%;
   }
 
-  .singer--front {
-    width: 24%;
-    top: 54%;
+  .singer--center {
+    width: 30%;
+    top: 50%;
   }
 
   .chest-letter {
