@@ -164,6 +164,22 @@
           </svg>
         </button>
 
+        <!-- Hi-hat's rhythm dial: mounted right under the drum it drives,
+             not off in a settings panel. Hi-hat alone gets the 1/16 option. -->
+        <div
+          class="rhythm-dial"
+          data-target="hihat-closed"
+          role="group"
+          aria-label="Closed hi-hat auto-rhythm"
+          style="left: 1%; top: 74%; z-index: 6"
+        >
+          <button type="button" data-subdivision="off" class="is-active">Manual</button>
+          <button type="button" data-subdivision="1/2">½</button>
+          <button type="button" data-subdivision="1/4">¼</button>
+          <button type="button" data-subdivision="1/8">⅛</button>
+          <button type="button" data-subdivision="1/16">1/16</button>
+        </div>
+
         <!-- Snare (front, left of kick) -->
         <button
           type="button"
@@ -186,6 +202,20 @@
           </svg>
         </button>
 
+        <!-- Snare's rhythm dial. -->
+        <div
+          class="rhythm-dial"
+          data-target="snare"
+          role="group"
+          aria-label="Snare auto-rhythm"
+          style="left: 24%; top: 79%; z-index: 6"
+        >
+          <button type="button" data-subdivision="off" class="is-active">Manual</button>
+          <button type="button" data-subdivision="1/2">½</button>
+          <button type="button" data-subdivision="1/4">¼</button>
+          <button type="button" data-subdivision="1/8">⅛</button>
+        </div>
+
         <!-- Kick (front centre, dominant) -->
         <button
           type="button"
@@ -205,6 +235,20 @@
             <text class="key-label" x="110" y="100" text-anchor="middle">SPACE</text>
           </svg>
         </button>
+
+        <!-- Kick's rhythm dial, mounted low on the shell's front rim. -->
+        <div
+          class="rhythm-dial"
+          data-target="kick"
+          role="group"
+          aria-label="Kick auto-rhythm"
+          style="left: 47%; top: 86%; z-index: 10"
+        >
+          <button type="button" data-subdivision="off" class="is-active">Manual</button>
+          <button type="button" data-subdivision="1/2">½</button>
+          <button type="button" data-subdivision="1/4">¼</button>
+          <button type="button" data-subdivision="1/8">⅛</button>
+        </div>
 
         <!-- Floor tom (front right, standing on legs) -->
         <button

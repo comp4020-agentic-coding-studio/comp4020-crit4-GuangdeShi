@@ -1,5 +1,7 @@
 import type { DrumId } from "./drum-audio";
 import { playDrum } from "./drum-audio";
+import type { Subdivision } from "./scheduler";
+import { setLayer, setScheduledHitListener } from "./scheduler";
 
 const stage = document.querySelector<HTMLElement>("#stage");
 
@@ -59,4 +61,24 @@ window.addEventListener("keydown", (event) => {
     event.preventDefault();
     hit(drum.dataset.drum as DrumId);
   }
+});
+
+// Scheduled hits get the same physical reaction as a direct hit --- a
+// looping layer should look like the drum being played, not a separate
+// "the app did this" indicator.
+setScheduledHitListener((id) => flashVisual(id));
+
+// Each dial is a sibling of the drum it controls (buttons can't nest), so
+// wiring is done by data-target rather than DOM position.
+document.querySelectorAll<HTMLElement>(".rhythm-dial").forEach((dial) => {
+  const target = dial.dataset.target as DrumId | undefined;
+  if (!target) return;
+  const buttons = Array.from(dial.querySelectorAll<HTMLButtonElement>("button[data-subdivision]"));
+  dial.addEventListener("click", (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("button[data-subdivision]");
+    if (!button) return;
+    const subdivision = button.dataset.subdivision;
+    setLayer(target, subdivision === "off" ? null : (subdivision as Subdivision));
+    for (const b of buttons) b.classList.toggle("is-active", b === button);
+  });
 });

@@ -72,3 +72,16 @@ describe("C4: a drum kit, every drum keyboard-playable", () => {
     }
   });
 });
+
+describe("C4: kick, snare, and hi-hat can loop on a shared clock", () => {
+  it("gives exactly kick, snare, and hihat-closed a rhythm dial with real buttons", () => {
+    const dials = Array.from(doc.querySelectorAll<HTMLElement>(".rhythm-dial"));
+    const targets = dials.map((el) => el.dataset.target).filter(Boolean);
+    expect(targets.sort()).toEqual(["hihat-closed", "kick", "snare"].sort());
+    for (const dial of dials) {
+      const buttons = Array.from(dial.querySelectorAll<HTMLElement>("button[data-subdivision]"));
+      expect(buttons.length).toBeGreaterThanOrEqual(4);
+      expect(buttons.some((b) => b.dataset.subdivision === "off")).toBe(true);
+    }
+  });
+});
