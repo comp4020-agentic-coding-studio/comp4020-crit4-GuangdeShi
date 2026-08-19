@@ -1,3 +1,6 @@
+import type { SingerRole } from "./singers";
+import { playRole } from "./audio";
+
 const stage = document.querySelector<HTMLElement>("#stage");
 const hammer = document.querySelector<HTMLElement>("#hammer");
 
@@ -33,9 +36,18 @@ function triggerBonk(singer: HTMLElement) {
   singer.classList.add("is-hit");
 }
 
+// The single entry point for "this singer was hit" — visual reaction and
+// live synthesis fire together, from the same user gesture. This is also
+// where the AudioContext gets created on the very first hit of a session.
+function trigger(singer: HTMLElement) {
+  triggerBonk(singer);
+  const role = singer.dataset.role as SingerRole | undefined;
+  if (role) playRole(role);
+}
+
 stage?.addEventListener("click", (event) => {
   const singer = (event.target as HTMLElement).closest<HTMLElement>(".singer");
-  if (singer) triggerBonk(singer);
+  if (singer) trigger(singer);
 });
 
 // The animation lives on the inner .singer-fig; listen there and clear the
@@ -54,5 +66,5 @@ stage?.addEventListener("animationend", (event) => {
 window.addEventListener("keydown", (event) => {
   const key = event.key.length === 1 ? event.key.toUpperCase() : event.key;
   const singer = singersByKey.get(key);
-  if (singer) triggerBonk(singer);
+  if (singer) trigger(singer);
 });
