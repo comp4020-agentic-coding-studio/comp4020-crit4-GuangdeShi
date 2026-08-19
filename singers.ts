@@ -1,6 +1,5 @@
-// Config + SVG rendering for the eight choir members. Kept separate from
-// main.ts so the interaction/audio wiring (later commits) doesn't have to
-// wade through markup strings.
+// Config + SVG rendering for the choir members. Kept separate from main.ts
+// so the interaction/audio wiring doesn't have to wade through markup strings.
 
 export type SingerRole =
   | "bass"
@@ -25,20 +24,36 @@ export interface Singer {
   faceShape: "round" | "square" | "oval" | "heart" | "long";
   headRx: number;
   headRy: number;
-  hairStyle: "buzz" | "mohawk" | "long-straight" | "bun" | "afro" | "bob" | "ponytail" | "pigtails";
+  hairStyle:
+    | "buzz"
+    | "mohawk"
+    | "long-straight"
+    | "bun"
+    | "afro"
+    | "bob"
+    | "ponytail"
+    | "pigtails"
+    | "flat-top"
+    | "twin-buns";
   mouthIdle: string; // path 'd', small/closed per the idle spec
   eyeRx: number;
   eyeRy: number;
   clothingStyle: "crewneck" | "hoodie" | "turtleneck" | "cardigan-v" | "striped" | "v-sweater" | "collared" | "open-cardigan";
 }
 
+// Three staggered depth rows (back/middle/front). Row height and vertical
+// offset are chosen so a row's chest-letter zone (near the bottom of each
+// figure) never falls inside the row in front of it — that's the lesson from
+// the V1 occlusion bug (2cdf745), generalised: separate rows by enough
+// vertical space that head-vs-label collisions can't happen, then let
+// same-row neighbours sit close/slightly overlapping for a crowded feel.
 export const SINGERS: Singer[] = [
   {
-    key: "A",
+    key: "Q",
     role: "bass",
     label: "bass, a low boom",
-    row: "front",
-    x: 32,
+    row: "back",
+    x: 10,
     skin: "#e8b48a",
     hair: "#2b2118",
     clothing: "#2f3b52",
@@ -47,142 +62,294 @@ export const SINGERS: Singer[] = [
     headRx: 46,
     headRy: 44,
     hairStyle: "buzz",
-    mouthIdle: "M92,106 Q110,112 128,106",
+    mouthIdle: "M90,105 Q110,112 130,105",
     eyeRx: 7,
     eyeRy: 7.5,
     clothingStyle: "crewneck",
   },
   {
-    key: "S",
+    key: "W",
     role: "percussive",
     label: "a percussive puh",
-    row: "back",
-    x: 8,
+    row: "middle",
+    x: 1,
     skin: "#c98a5e",
-    hair: "#e2453f",
+    hair: "#caa23a",
+    clothing: "#6f5aa8",
+    clothingAccent: "#503f80",
+    faceShape: "oval",
+    headRx: 37,
+    headRy: 48,
+    hairStyle: "bob",
+    mouthIdle: "M94,103 Q110,99 126,103",
+    eyeRx: 6,
+    eyeRy: 6,
+    clothingStyle: "v-sweater",
+  },
+  {
+    key: "E",
+    role: "breath-tss",
+    label: "a soft tss breath",
+    row: "back",
+    x: 28,
+    skin: "#f0c9a0",
+    hair: "#5b4636",
     clothing: "#e2453f",
     clothingAccent: "#a52f2a",
     faceShape: "square",
-    headRx: 40,
-    headRy: 40,
+    headRx: 38,
+    headRy: 38,
     hairStyle: "mohawk",
-    mouthIdle: "M96,104 Q110,100 124,104",
+    mouthIdle: "M96,107 Q110,105 124,107",
     eyeRx: 6,
-    eyeRy: 7,
+    eyeRy: 6.5,
     clothingStyle: "hoodie",
   },
   {
-    key: "D",
-    role: "breath-tss",
-    label: "a soft tss breath",
+    key: "R",
+    role: "hum",
+    label: "a warm mmm hum",
     row: "middle",
-    x: 20,
-    skin: "#f0c9a0",
-    hair: "#5b4636",
+    x: 19,
+    skin: "#8a5a3f",
+    hair: "#c9a227",
+    clothing: "#fdf6e3",
+    clothingAccent: "#d68a3c",
+    faceShape: "heart",
+    headRx: 44,
+    headRy: 46,
+    hairStyle: "ponytail",
+    mouthIdle: "M92,107 Q110,115 128,107",
+    eyeRx: 6.5,
+    eyeRy: 6,
+    clothingStyle: "collared",
+  },
+  {
+    key: "T",
+    role: "open-ah",
+    label: "an open ah tone",
+    row: "back",
+    x: 46,
+    skin: "#7a4a2d",
+    hair: "#151015",
     clothing: "#7d8fa3",
     clothingAccent: "#5c6b7c",
     faceShape: "oval",
     headRx: 37,
     headRy: 50,
     hairStyle: "long-straight",
-    mouthIdle: "M98,108 Q110,106 122,108",
-    eyeRx: 5.5,
-    eyeRy: 5,
+    mouthIdle: "M88,106 Q110,117 132,106",
+    eyeRx: 8,
+    eyeRy: 7,
     clothingStyle: "turtleneck",
+  },
+  {
+    key: "Y",
+    role: "round-ooh",
+    label: "a round ooh tone",
+    row: "middle",
+    x: 37,
+    skin: "#e8b48a",
+    hair: "#4a3020",
+    clothing: "#a9c9d6",
+    clothingAccent: "#87acbb",
+    faceShape: "long",
+    headRx: 33,
+    headRy: 54,
+    hairStyle: "pigtails",
+    mouthIdle: "M103,108 a7,6 0 1,0 14,0 a7,6 0 1,0 -14,0",
+    eyeRx: 6,
+    eyeRy: 6.5,
+    clothingStyle: "open-cardigan",
+  },
+  {
+    key: "U",
+    role: "bright-ee",
+    label: "a bright ee tone",
+    row: "back",
+    x: 64,
+    skin: "#f0c9a0",
+    hair: "#241c14",
+    clothing: "#f6e8ee",
+    clothingAccent: "#c97f22",
+    faceShape: "heart",
+    headRx: 42,
+    headRy: 48,
+    hairStyle: "bun",
+    mouthIdle: "M90,103 Q110,113 130,103",
+    eyeRx: 6.5,
+    eyeRy: 7,
+    clothingStyle: "cardigan-v",
+  },
+  {
+    key: "I",
+    role: "soft-airy",
+    label: "a soft, airy breath",
+    row: "middle",
+    x: 55,
+    skin: "#d9a066",
+    hair: "#8a8a8a",
+    clothing: "#2f6b52",
+    clothingAccent: "#1f4a39",
+    faceShape: "round",
+    headRx: 43,
+    headRy: 41,
+    hairStyle: "flat-top",
+    mouthIdle: "M99,106 Q110,108 121,106",
+    eyeRx: 7,
+    eyeRy: 7,
+    clothingStyle: "crewneck",
+  },
+  {
+    key: "A",
+    role: "bass",
+    label: "bass, a low boom",
+    row: "back",
+    x: 82,
+    skin: "#4a2f1f",
+    hair: "#6b2e20",
+    clothing: "#e8d84a",
+    clothingAccent: "#c2ab2e",
+    faceShape: "long",
+    headRx: 34,
+    headRy: 52,
+    hairStyle: "afro",
+    mouthIdle: "M91,108 Q110,114 129,108",
+    eyeRx: 6,
+    eyeRy: 6.5,
+    clothingStyle: "striped",
+  },
+  {
+    key: "S",
+    role: "percussive",
+    label: "a percussive puh",
+    row: "middle",
+    x: 73,
+    skin: "#f5d7b5",
+    hair: "#100c0a",
+    clothing: "#3fae7a",
+    clothingAccent: "#2c7d57",
+    faceShape: "square",
+    headRx: 39,
+    headRy: 39,
+    hairStyle: "twin-buns",
+    mouthIdle: "M95,105 Q110,101 125,105",
+    eyeRx: 6,
+    eyeRy: 6.5,
+    clothingStyle: "hoodie",
+  },
+  {
+    key: "D",
+    role: "breath-tss",
+    label: "a soft tss breath",
+    row: "front",
+    x: 10,
+    skin: "#e8b48a",
+    hair: "#2b2118",
+    clothing: "#dbe8f6",
+    clothingAccent: "#5a7ab0",
+    faceShape: "heart",
+    headRx: 46,
+    headRy: 48,
+    hairStyle: "mohawk",
+    mouthIdle: "M97,109 Q110,107 123,109",
+    eyeRx: 7,
+    eyeRy: 7.5,
+    clothingStyle: "cardigan-v",
   },
   {
     key: "F",
     role: "hum",
     label: "a warm mmm hum",
     row: "middle",
-    x: 44,
-    skin: "#8a5a3f",
-    hair: "#241c14",
-    clothing: "#c98fae",
-    clothingAccent: "#a9678a",
+    x: 91,
+    skin: "#c98a5e",
+    hair: "#6b2e20",
+    clothing: "#b06a8a",
+    clothingAccent: "#8a4a6b",
     faceShape: "heart",
-    headRx: 44,
-    headRy: 46,
-    hairStyle: "bun",
-    mouthIdle: "M94,108 Q110,114 126,108",
+    headRx: 41,
+    headRy: 44,
+    hairStyle: "buzz",
+    mouthIdle: "M93,110 Q110,116 127,110",
     eyeRx: 6.5,
     eyeRy: 6,
-    clothingStyle: "cardigan-v",
+    clothingStyle: "turtleneck",
   },
   {
-    key: "J",
+    key: "G",
     role: "open-ah",
     label: "an open ah tone",
     row: "front",
-    x: 68,
-    skin: "#7a4a2d",
+    x: 28,
+    skin: "#8a5a3f",
     hair: "#151015",
-    clothing: "#e8a23c",
-    clothingAccent: "#c97f22",
+    clothing: "#e26b6b",
+    clothingAccent: "#a54a4a",
     faceShape: "round",
-    headRx: 50,
-    headRy: 47,
-    hairStyle: "afro",
-    mouthIdle: "M90,107 Q110,116 130,107",
+    headRx: 49,
+    headRy: 46,
+    hairStyle: "long-straight",
+    mouthIdle: "M89,109 Q110,118 131,109",
     eyeRx: 8,
     eyeRy: 8,
     clothingStyle: "striped",
   },
   {
-    key: "K",
+    key: "H",
     role: "round-ooh",
     label: "a round ooh tone",
-    row: "middle",
-    x: 80,
-    skin: "#e8b48a",
-    hair: "#3a2418",
-    clothing: "#6f5aa8",
-    clothingAccent: "#503f80",
-    faceShape: "long",
-    headRx: 33,
-    headRy: 54,
-    hairStyle: "bob",
-    mouthIdle: "M104,107 a6,5 0 1,0 12,0 a6,5 0 1,0 -12,0",
-    eyeRx: 6,
-    eyeRy: 6.5,
+    row: "front",
+    x: 46,
+    skin: "#7a4a2d",
+    hair: "#caa23a",
+    clothing: "#4a7ab0",
+    clothingAccent: "#33587f",
+    faceShape: "square",
+    headRx: 41,
+    headRy: 40,
+    hairStyle: "bun",
+    mouthIdle: "M103,109 a6.5,5.5 0 1,0 13,0 a6.5,5.5 0 1,0 -13,0",
+    eyeRx: 6.5,
+    eyeRy: 7,
     clothingStyle: "v-sweater",
   },
   {
-    key: "L",
+    key: "J",
     role: "bright-ee",
     label: "a bright ee tone",
-    row: "back",
-    x: 56,
+    row: "front",
+    x: 64,
     skin: "#f0c9a0",
-    hair: "#caa23a",
-    clothing: "#e8d84a",
-    clothingAccent: "#c2ab2e",
-    faceShape: "square",
-    headRx: 39,
-    headRy: 42,
-    hairStyle: "ponytail",
-    mouthIdle: "M92,104 Q110,114 128,104",
-    eyeRx: 6.5,
-    eyeRy: 7,
+    hair: "#241c14",
+    clothing: "#fdf6e3",
+    clothingAccent: "#c9722a",
+    faceShape: "long",
+    headRx: 36,
+    headRy: 53,
+    hairStyle: "afro",
+    mouthIdle: "M91,106 Q110,116 129,106",
+    eyeRx: 7,
+    eyeRy: 7.5,
     clothingStyle: "collared",
   },
   {
-    key: ";",
+    key: "K",
     role: "soft-airy",
     label: "a soft, airy breath",
-    row: "back",
-    x: 92,
-    skin: "#c98a5e",
-    hair: "#402a1f",
-    clothing: "#a9c9d6",
-    clothingAccent: "#87acbb",
+    row: "front",
+    x: 82,
+    skin: "#d9a066",
+    hair: "#4a3020",
+    clothing: "#cbb8e0",
+    clothingAccent: "#9a82c2",
     faceShape: "oval",
-    headRx: 33,
-    headRy: 44,
-    hairStyle: "pigtails",
-    mouthIdle: "M100,107 Q110,109 120,107",
-    eyeRx: 5,
-    eyeRy: 3.2,
+    headRx: 38,
+    headRy: 49,
+    hairStyle: "bob",
+    mouthIdle: "M99,109 Q110,111 121,109",
+    eyeRx: 6,
+    eyeRy: 6,
     clothingStyle: "open-cardigan",
   },
 ];
@@ -233,6 +400,15 @@ function hairFront(s: Singer): string {
         <path d="M68,58 A42,40 0 0 1 152,58 L152,42 A42,44 0 0 0 68,42 Z" fill="${s.hair}"/>
         <circle cx="58" cy="76" r="13" fill="${s.hair}"/>
         <circle cx="162" cy="76" r="13" fill="${s.hair}"/>`;
+    case "flat-top":
+      return `
+        <path d="M68,60 A42,40 0 0 1 152,60 L152,44 A42,42 0 0 0 68,44 Z" fill="${s.hair}"/>
+        <rect x="72" y="10" width="76" height="30" fill="${s.hair}"/>`;
+    case "twin-buns":
+      return `
+        <path d="M66,58 A44,40 0 0 1 154,58 L154,42 A44,44 0 0 0 66,42 Z" fill="${s.hair}"/>
+        <circle cx="86" cy="16" r="12" fill="${s.hair}"/>
+        <circle cx="134" cy="16" r="12" fill="${s.hair}"/>`;
     default:
       return "";
   }
@@ -270,8 +446,8 @@ function clothingDetails(s: Singer): string {
       const stripes = [150, 168, 186, 204, 222, 240]
         .map((y) => `<rect x="36" y="${y}" width="148" height="9" fill="${clothingAccent}"/>`)
         .join("");
-      return `<clipPath id="clip-${s.key.replace(";", "semi")}"><path d="${TORSO_D}"/></clipPath>
-        <g clip-path="url(#clip-${s.key.replace(";", "semi")})">${stripes}</g>`;
+      return `<clipPath id="clip-${s.key}"><path d="${TORSO_D}"/></clipPath>
+        <g clip-path="url(#clip-${s.key})">${stripes}</g>`;
     }
     case "v-sweater":
       return `<path d="M110,132 L94,162 L110,182 L126,162 Z" fill="${clothingAccent}"/>`;
@@ -293,25 +469,14 @@ function clothingDetails(s: Singer): string {
 
 export function renderSinger(s: Singer, index: number): string {
   const rowOrder = { back: 1, middle: 2, front: 3 }[s.row];
-  const widthPct = { back: 15, middle: 19, front: 24 }[s.row];
-  const topPct = { back: 4, middle: 24, front: 44 }[s.row];
 
   const svg = `
     <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
       <g class="body-group">
         <path class="torso" d="${TORSO_D}" fill="${s.clothing}"/>
         ${clothingDetails(s)}
-        ${
-          s.key === ";"
-            ? // The font glyph for ";" renders as a near-illegible blob at
-              // chest-letter scale in some browsers (thin comma-tail vs. a
-              // heavy stroke) — hand-drawn so it reads the same everywhere.
-              `<g class="chest-letter chest-letter--semicolon">
-                <circle cx="110" cy="199" r="10"/>
-                <path d="M 100,214 C 122,220 124,238 96,254 C 114,240 110,224 98,216 Z"/>
-              </g>`
-            : `<text class="chest-letter" x="110" y="222" text-anchor="middle">${s.key}</text>`
-        }
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">${s.key}</text>
       </g>
       <g class="head-group">
         ${hairBack(s)}
@@ -332,7 +497,7 @@ export function renderSinger(s: Singer, index: number): string {
       class="singer singer--${s.row}"
       data-key="${s.key}"
       data-role="${s.role}"
-      style="left:${s.x}%; top:${topPct}%; width:${widthPct}%; z-index:${rowOrder * 10 + index};"
-      aria-label="Singer ${s.key === ";" ? "semicolon" : s.key}, ${s.label}. Click or press ${s.key === ";" ? "semicolon" : s.key} to hear them sing."
+      style="left:${s.x}%; z-index:${rowOrder * 10 + index};"
+      aria-label="Singer ${s.key}, ${s.label}. Click or press ${s.key} to hear them sing."
     >${svg}</button>`;
 }

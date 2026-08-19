@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 const DIST = resolve("dist");
 const doc = new JSDOM(readFileSync(join(DIST, "index.html"), "utf8")).window.document;
 
-const KEYS = ["A", "S", "D", "F", "J", "K", "L", ";"];
+const KEYS = ["Q", "W", "E", "R", "T", "Y", "U", "I", "A", "S", "D", "F", "G", "H", "J", "K"];
 
 describe("C4: the browser is the instrument", () => {
   it("ships no prerecorded audio samples", () => {
@@ -37,7 +37,7 @@ describe("C4: the browser is the instrument", () => {
   });
 });
 
-describe("C4: eight singers, each keyboard-playable", () => {
+describe("C4: sixteen singers, each keyboard-playable", () => {
   it("shows exactly one large keyboard letter per singer, matching the suggested mapping", () => {
     const chestLetters = Array.from(doc.querySelectorAll<HTMLElement>("[data-key]"))
       .map((el) => el.dataset.key)

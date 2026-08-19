@@ -91,6 +91,28 @@ main {
   border-radius: 12px;
 }
 
+/* Row width/top are a function of depth only (not per-singer), so they live
+   here rather than in inline styles — that's what lets the mobile media
+   query below override them with normal cascade instead of !important.
+   The gap between back/middle/top and middle/front is sized so a row's
+   chest-letter zone (near the bottom of each figure) never falls inside the
+   row rendered in front of it — the generalised fix for the V1 occlusion
+   bug (2cdf745), now covering three depth layers instead of one lane. */
+.singer--back {
+  width: 13%;
+  top: 4%;
+}
+
+.singer--middle {
+  width: 17%;
+  top: 32%;
+}
+
+.singer--front {
+  width: 19%;
+  top: 60%;
+}
+
 .singer--back .singer-fig {
   filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.35)) brightness(0.94);
 }
@@ -110,25 +132,20 @@ main {
   overflow: visible;
 }
 
+/* A dark chip behind the chest letter, independent of the singer's own
+   clothing colour — without it, a light clothing colour (e.g. the pale pink
+   or cream some singers wear) leaves the white letter fill with almost no
+   contrast against it and the key label becomes unreadable. */
+.chest-badge {
+  fill: rgba(0, 0, 0, 0.32);
+}
+
 .chest-letter {
   font: 700 34px/1 system-ui, sans-serif;
   fill: rgba(255, 255, 255, 0.92);
   paint-order: stroke;
   stroke: rgba(0, 0, 0, 0.35);
   stroke-width: 3px;
-}
-
-/* The ";" chest mark is drawn as SVG shapes, not text (see renderSinger) —
-   the font glyph's comma-tail is too thin against a 3px stroke and reads as
-   a blob rather than a semicolon in some browsers. Shares the same fill and
-   stroke as the text-based chest letters so it matches visually. */
-.chest-letter--semicolon circle,
-.chest-letter--semicolon path {
-  fill: rgba(255, 255, 255, 0.92);
-  paint-order: stroke;
-  stroke: rgba(0, 0, 0, 0.35);
-  stroke-width: 3px;
-  stroke-linejoin: round;
 }
 
 .eye {
@@ -231,7 +248,27 @@ main {
     padding: 0.5rem;
   }
 
+  /* With 16 singers instead of 8, each row's rendered width shrinks on a
+     narrow phone screen. Rather than removing singers or scrolling, grow
+     each row's share of the stage (and the chest letter, which is sized in
+     the SVG's own viewBox units and so scales with it) so every figure and
+     its key label stay legible at phone width. */
+  .singer--back {
+    width: 17%;
+    top: 2%;
+  }
+
+  .singer--middle {
+    width: 21%;
+    top: 26%;
+  }
+
+  .singer--front {
+    width: 24%;
+    top: 54%;
+  }
+
   .chest-letter {
-    font: 700 30px/1 system-ui, sans-serif;
+    font: 700 40px/1 system-ui, sans-serif;
   }
 }

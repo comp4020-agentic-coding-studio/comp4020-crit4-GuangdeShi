@@ -6,7 +6,7 @@
     <title>A Cappella Crowd Instrument</title>
     <meta
       name="description"
-      content="A tiny browser choir you play with a hammer, a keyboard, or a tap — eight singers, eight live synthesised voices."
+      content="A tiny browser choir you play with a hammer, a keyboard, or a tap — sixteen singers, live synthesised voices."
     />
 
     <meta property="og:type" content="website" />
@@ -26,20 +26,20 @@
       <div id="stage" aria-label="A small a cappella choir. Click, tap, or press the letter on a singer's chest to hear them sing.">
         <div id="hammer" aria-hidden="true"></div>
 
-
-                    <button
+    <button
       type="button"
-      class="singer singer--front"
-      data-key="A"
+      class="singer singer--back"
+      data-key="Q"
       data-role="bass"
-      style="left:32%; top:44%; width:24%; z-index:30;"
-      aria-label="Singer A, bass, a low boom. Click or press A to hear them sing."
+      style="left:10%; z-index:10;"
+      aria-label="Singer Q, bass, a low boom. Click or press Q to hear them sing."
     >
     <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
       <g class="body-group">
         <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#2f3b52"/>
         <path d="M90,132 Q110,150 130,132" fill="none" stroke="#1f2839" stroke-width="4"/>
-        <text class="chest-letter" x="110" y="222" text-anchor="middle">A</text>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">Q</text>
       </g>
       <g class="head-group">
         
@@ -49,7 +49,35 @@
           <ellipse class="eye eye-left" cx="92" cy="80" rx="7" ry="7.5"/>
           <ellipse class="eye eye-right" cx="128" cy="80" rx="7" ry="7.5"/>
         </g>
-        <path class="mouth mouth-idle" d="M92,106 Q110,112 128,106" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <path class="mouth mouth-idle" d="M90,105 Q110,112 130,105" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
+      </g>
+    </svg></button>
+
+    <button
+      type="button"
+      class="singer singer--middle"
+      data-key="W"
+      data-role="percussive"
+      style="left:1%; z-index:21;"
+      aria-label="Singer W, a percussive puh. Click or press W to hear them sing."
+    >
+    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
+      <g class="body-group">
+        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#6f5aa8"/>
+        <path d="M110,132 L94,162 L110,182 L126,162 Z" fill="#503f80"/>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">W</text>
+      </g>
+      <g class="head-group">
+        <path d="M62,82 C58,28 84,12 110,12 C136,12 162,28 158,82 C158,114 151,133 140,140 L140,92 C140,60 128,38 110,38 C92,38 80,60 80,92 L80,140 C69,133 62,114 62,82 Z" fill="#caa23a"/>
+        <ellipse cx="110" cy="78" rx="37" ry="48" fill="#c98a5e"/>
+        <path d="M64,56 A46,42 0 0 1 156,56 L156,40 A46,44 0 0 0 64,40 Z" fill="#caa23a"/>
+        <g class="eyes">
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="6" ry="6"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="6" ry="6"/>
+        </g>
+        <path class="mouth mouth-idle" d="M94,103 Q110,99 126,103" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
         <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
       </g>
     </svg></button>
@@ -57,10 +85,10 @@
     <button
       type="button"
       class="singer singer--back"
-      data-key="S"
-      data-role="percussive"
-      style="left:8%; top:4%; width:15%; z-index:11;"
-      aria-label="Singer S, a percussive puh. Click or press S to hear them sing."
+      data-key="E"
+      data-role="breath-tss"
+      style="left:28%; z-index:12;"
+      aria-label="Singer E, a soft tss breath. Click or press E to hear them sing."
     >
     <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
       <g class="body-group">
@@ -69,20 +97,21 @@
         <path d="M70,140 Q110,110 150,140 L150,160 Q110,138 70,160 Z" fill="#a52f2a"/>
         <line x1="102" y1="150" x2="99" y2="172" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
         <line x1="118" y1="150" x2="121" y2="172" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-        <text class="chest-letter" x="110" y="222" text-anchor="middle">S</text>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">E</text>
       </g>
       <g class="head-group">
         
-        <rect x="70" y="38" width="80" height="80" rx="20" ry="22" fill="#c98a5e"/>
+        <rect x="72" y="40" width="76" height="76" rx="20" ry="22" fill="#f0c9a0"/>
         
-        <path d="M99,38 L103,6 L110,38 Z" fill="#e2453f"/>
-        <path d="M108,36 L112,2 L118,36 Z" fill="#e2453f"/>
-        <path d="M116,38 L120,6 L127,38 Z" fill="#e2453f"/>
+        <path d="M99,38 L103,6 L110,38 Z" fill="#5b4636"/>
+        <path d="M108,36 L112,2 L118,36 Z" fill="#5b4636"/>
+        <path d="M116,38 L120,6 L127,38 Z" fill="#5b4636"/>
         <g class="eyes">
-          <ellipse class="eye eye-left" cx="92" cy="80" rx="6" ry="7"/>
-          <ellipse class="eye eye-right" cx="128" cy="80" rx="6" ry="7"/>
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="6" ry="6.5"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="6" ry="6.5"/>
         </g>
-        <path class="mouth mouth-idle" d="M96,104 Q110,100 124,104" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <path class="mouth mouth-idle" d="M96,107 Q110,105 124,107" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
         <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
       </g>
     </svg></button>
@@ -90,26 +119,58 @@
     <button
       type="button"
       class="singer singer--middle"
-      data-key="D"
-      data-role="breath-tss"
-      style="left:20%; top:24%; width:19%; z-index:22;"
-      aria-label="Singer D, a soft tss breath. Click or press D to hear them sing."
+      data-key="R"
+      data-role="hum"
+      style="left:19%; z-index:23;"
+      aria-label="Singer R, a warm mmm hum. Click or press R to hear them sing."
+    >
+    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
+      <g class="body-group">
+        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#fdf6e3"/>
+        
+        <path d="M110,132 L92,132 L104,152 Z" fill="#fdf6e3"/>
+        <path d="M110,132 L128,132 L116,152 Z" fill="#fdf6e3"/>
+        <path d="M108,150 L110,166 L112,150 Z" fill="#d68a3c"/>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">R</text>
+      </g>
+      <g class="head-group">
+        <path d="M152,38 C174,48 182,82 172,114 C167,129 158,132 152,123 C161,98 158,64 142,44 Z" fill="#c9a227"/>
+        <path d="M70,72 C70,42 90,30 110,30 C130,30 150,42 150,72 C150,102 130,127 110,140 C90,127 70,102 70,72 Z" fill="#8a5a3f"/>
+        <path d="M66,56 A44,40 0 0 1 154,56 L154,38 A44,44 0 0 0 66,38 Z" fill="#c9a227"/>
+        <g class="eyes">
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="6.5" ry="6"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="6.5" ry="6"/>
+        </g>
+        <path class="mouth mouth-idle" d="M92,107 Q110,115 128,107" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
+      </g>
+    </svg></button>
+
+    <button
+      type="button"
+      class="singer singer--back"
+      data-key="T"
+      data-role="open-ah"
+      style="left:46%; z-index:14;"
+      aria-label="Singer T, an open ah tone. Click or press T to hear them sing."
     >
     <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
       <g class="body-group">
         <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#7d8fa3"/>
         <rect x="86" y="124" width="48" height="22" rx="10" fill="#5c6b7c"/>
-        <text class="chest-letter" x="110" y="222" text-anchor="middle">D</text>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">T</text>
       </g>
       <g class="head-group">
-        <path d="M60,92 C56,38 84,18 110,18 C136,18 164,38 160,92 L160,176 L150,176 L150,102 C150,62 132,36 110,36 C88,36 70,62 70,102 L70,176 L60,176 Z" fill="#5b4636"/>
-        <ellipse cx="110" cy="78" rx="37" ry="50" fill="#f0c9a0"/>
-        <path d="M66,58 A44,42 0 0 1 154,58 L154,44 A44,44 0 0 0 66,44 Z" fill="#5b4636"/>
+        <path d="M60,92 C56,38 84,18 110,18 C136,18 164,38 160,92 L160,176 L150,176 L150,102 C150,62 132,36 110,36 C88,36 70,62 70,102 L70,176 L60,176 Z" fill="#151015"/>
+        <ellipse cx="110" cy="78" rx="37" ry="50" fill="#7a4a2d"/>
+        <path d="M66,58 A44,42 0 0 1 154,58 L154,44 A44,44 0 0 0 66,44 Z" fill="#151015"/>
         <g class="eyes">
-          <ellipse class="eye eye-left" cx="92" cy="80" rx="5.5" ry="5"/>
-          <ellipse class="eye eye-right" cx="128" cy="80" rx="5.5" ry="5"/>
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="8" ry="7"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="8" ry="7"/>
         </g>
-        <path class="mouth mouth-idle" d="M98,108 Q110,106 122,108" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <path class="mouth mouth-idle" d="M88,106 Q110,117 132,106" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
         <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
       </g>
     </svg></button>
@@ -117,127 +178,10 @@
     <button
       type="button"
       class="singer singer--middle"
-      data-key="F"
-      data-role="hum"
-      style="left:44%; top:24%; width:19%; z-index:23;"
-      aria-label="Singer F, a warm mmm hum. Click or press F to hear them sing."
-    >
-    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
-      <g class="body-group">
-        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#c98fae"/>
-        
-        <path d="M110,132 L88,168 L110,196 L132,168 Z" fill="#f6e8ee"/>
-        <circle cx="110" cy="180" r="3" fill="#a9678a"/>
-        <circle cx="110" cy="200" r="3" fill="#a9678a"/>
-        <text class="chest-letter" x="110" y="222" text-anchor="middle">F</text>
-      </g>
-      <g class="head-group">
-        
-        <path d="M70,72 C70,42 90,30 110,30 C130,30 150,42 150,72 C150,102 130,127 110,140 C90,127 70,102 70,72 Z" fill="#8a5a3f"/>
-        
-        <path d="M66,56 A44,40 0 0 1 154,56 L154,38 A44,44 0 0 0 66,38 Z" fill="#241c14"/>
-        <circle cx="110" cy="20" r="13" fill="#241c14"/>
-        <g class="eyes">
-          <ellipse class="eye eye-left" cx="92" cy="80" rx="6.5" ry="6"/>
-          <ellipse class="eye eye-right" cx="128" cy="80" rx="6.5" ry="6"/>
-        </g>
-        <path class="mouth mouth-idle" d="M94,108 Q110,114 126,108" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
-        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
-      </g>
-    </svg></button>
-
-    <button
-      type="button"
-      class="singer singer--front"
-      data-key="J"
-      data-role="open-ah"
-      style="left:68%; top:44%; width:24%; z-index:34;"
-      aria-label="Singer J, an open ah tone. Click or press J to hear them sing."
-    >
-    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
-      <g class="body-group">
-        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#e8a23c"/>
-        <clipPath id="clip-J"><path d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z"/></clipPath>
-        <g clip-path="url(#clip-J)"><rect x="36" y="150" width="148" height="9" fill="#c97f22"/><rect x="36" y="168" width="148" height="9" fill="#c97f22"/><rect x="36" y="186" width="148" height="9" fill="#c97f22"/><rect x="36" y="204" width="148" height="9" fill="#c97f22"/><rect x="36" y="222" width="148" height="9" fill="#c97f22"/><rect x="36" y="240" width="148" height="9" fill="#c97f22"/></g>
-        <text class="chest-letter" x="110" y="222" text-anchor="middle">J</text>
-      </g>
-      <g class="head-group">
-        
-        <ellipse cx="110" cy="78" rx="50" ry="47" fill="#7a4a2d"/>
-        <circle cx="58" cy="55" r="15" fill="#151015"/><circle cx="66" cy="32" r="15" fill="#151015"/><circle cx="82" cy="16" r="15" fill="#151015"/><circle cx="104" cy="8" r="15" fill="#151015"/><circle cx="116" cy="8" r="15" fill="#151015"/><circle cx="138" cy="16" r="15" fill="#151015"/><circle cx="154" cy="32" r="15" fill="#151015"/><circle cx="162" cy="55" r="15" fill="#151015"/><circle cx="70" cy="68" r="15" fill="#151015"/><circle cx="150" cy="68" r="15" fill="#151015"/><circle cx="88" cy="12" r="15" fill="#151015"/><circle cx="132" cy="12" r="15" fill="#151015"/>
-        <g class="eyes">
-          <ellipse class="eye eye-left" cx="92" cy="80" rx="8" ry="8"/>
-          <ellipse class="eye eye-right" cx="128" cy="80" rx="8" ry="8"/>
-        </g>
-        <path class="mouth mouth-idle" d="M90,107 Q110,116 130,107" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
-        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
-      </g>
-    </svg></button>
-
-    <button
-      type="button"
-      class="singer singer--middle"
-      data-key="K"
+      data-key="Y"
       data-role="round-ooh"
-      style="left:80%; top:24%; width:19%; z-index:25;"
-      aria-label="Singer K, a round ooh tone. Click or press K to hear them sing."
-    >
-    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
-      <g class="body-group">
-        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#6f5aa8"/>
-        <path d="M110,132 L94,162 L110,182 L126,162 Z" fill="#503f80"/>
-        <text class="chest-letter" x="110" y="222" text-anchor="middle">K</text>
-      </g>
-      <g class="head-group">
-        <path d="M62,82 C58,28 84,12 110,12 C136,12 162,28 158,82 C158,114 151,133 140,140 L140,92 C140,60 128,38 110,38 C92,38 80,60 80,92 L80,140 C69,133 62,114 62,82 Z" fill="#3a2418"/>
-        <ellipse cx="110" cy="78" rx="33" ry="54" fill="#e8b48a"/>
-        <path d="M64,56 A46,42 0 0 1 156,56 L156,40 A46,44 0 0 0 64,40 Z" fill="#3a2418"/>
-        <g class="eyes">
-          <ellipse class="eye eye-left" cx="92" cy="80" rx="6" ry="6.5"/>
-          <ellipse class="eye eye-right" cx="128" cy="80" rx="6" ry="6.5"/>
-        </g>
-        <path class="mouth mouth-idle" d="M104,107 a6,5 0 1,0 12,0 a6,5 0 1,0 -12,0" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
-        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
-      </g>
-    </svg></button>
-
-    <button
-      type="button"
-      class="singer singer--back"
-      data-key="L"
-      data-role="bright-ee"
-      style="left:56%; top:4%; width:15%; z-index:16;"
-      aria-label="Singer L, a bright ee tone. Click or press L to hear them sing."
-    >
-    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
-      <g class="body-group">
-        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#e8d84a"/>
-        
-        <path d="M110,132 L92,132 L104,152 Z" fill="#fdf6e3"/>
-        <path d="M110,132 L128,132 L116,152 Z" fill="#fdf6e3"/>
-        <path d="M108,150 L110,166 L112,150 Z" fill="#c2ab2e"/>
-        <text class="chest-letter" x="110" y="222" text-anchor="middle">L</text>
-      </g>
-      <g class="head-group">
-        <path d="M152,38 C174,48 182,82 172,114 C167,129 158,132 152,123 C161,98 158,64 142,44 Z" fill="#caa23a"/>
-        <rect x="71" y="36" width="78" height="84" rx="20" ry="22" fill="#f0c9a0"/>
-        <path d="M66,56 A44,40 0 0 1 154,56 L154,38 A44,44 0 0 0 66,38 Z" fill="#caa23a"/>
-        <g class="eyes">
-          <ellipse class="eye eye-left" cx="92" cy="80" rx="6.5" ry="7"/>
-          <ellipse class="eye eye-right" cx="128" cy="80" rx="6.5" ry="7"/>
-        </g>
-        <path class="mouth mouth-idle" d="M92,104 Q110,114 128,104" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
-        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
-      </g>
-    </svg></button>
-
-    <button
-      type="button"
-      class="singer singer--back"
-      data-key=";"
-      data-role="soft-airy"
-      style="left:92%; top:4%; width:15%; z-index:17;"
-      aria-label="Singer semicolon, a soft, airy breath. Click or press semicolon to hear them sing."
+      style="left:37%; z-index:25;"
+      aria-label="Singer Y, a round ooh tone. Click or press Y to hear them sing."
     >
     <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
       <g class="body-group">
@@ -247,23 +191,331 @@
         <line x1="122" y1="134" x2="128" y2="258" stroke="#87acbb" stroke-width="3"/>
         <circle cx="110" cy="176" r="2.6" fill="#87acbb"/>
         <circle cx="110" cy="200" r="2.6" fill="#87acbb"/>
-        <g class="chest-letter chest-letter--semicolon">
-                <circle cx="110" cy="199" r="10"/>
-                <path d="M 100,214 C 122,220 124,238 96,254 C 114,240 110,224 98,216 Z"/>
-              </g>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">Y</text>
       </g>
       <g class="head-group">
         
-        <ellipse cx="110" cy="78" rx="33" ry="44" fill="#c98a5e"/>
+        <ellipse cx="110" cy="78" rx="33" ry="54" fill="#e8b48a"/>
         
-        <path d="M68,58 A42,40 0 0 1 152,58 L152,42 A42,44 0 0 0 68,42 Z" fill="#402a1f"/>
-        <circle cx="58" cy="76" r="13" fill="#402a1f"/>
-        <circle cx="162" cy="76" r="13" fill="#402a1f"/>
+        <path d="M68,58 A42,40 0 0 1 152,58 L152,42 A42,44 0 0 0 68,42 Z" fill="#4a3020"/>
+        <circle cx="58" cy="76" r="13" fill="#4a3020"/>
+        <circle cx="162" cy="76" r="13" fill="#4a3020"/>
         <g class="eyes">
-          <ellipse class="eye eye-left" cx="92" cy="80" rx="5" ry="3.2"/>
-          <ellipse class="eye eye-right" cx="128" cy="80" rx="5" ry="3.2"/>
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="6" ry="6.5"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="6" ry="6.5"/>
         </g>
-        <path class="mouth mouth-idle" d="M100,107 Q110,109 120,107" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <path class="mouth mouth-idle" d="M103,108 a7,6 0 1,0 14,0 a7,6 0 1,0 -14,0" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
+      </g>
+    </svg></button>
+
+    <button
+      type="button"
+      class="singer singer--back"
+      data-key="U"
+      data-role="bright-ee"
+      style="left:64%; z-index:16;"
+      aria-label="Singer U, a bright ee tone. Click or press U to hear them sing."
+    >
+    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
+      <g class="body-group">
+        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#f6e8ee"/>
+        
+        <path d="M110,132 L88,168 L110,196 L132,168 Z" fill="#f6e8ee"/>
+        <circle cx="110" cy="180" r="3" fill="#c97f22"/>
+        <circle cx="110" cy="200" r="3" fill="#c97f22"/>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">U</text>
+      </g>
+      <g class="head-group">
+        
+        <path d="M70,72 C70,42 90,30 110,30 C130,30 150,42 150,72 C150,102 130,127 110,140 C90,127 70,102 70,72 Z" fill="#f0c9a0"/>
+        
+        <path d="M66,56 A44,40 0 0 1 154,56 L154,38 A44,44 0 0 0 66,38 Z" fill="#241c14"/>
+        <circle cx="110" cy="20" r="13" fill="#241c14"/>
+        <g class="eyes">
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="6.5" ry="7"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="6.5" ry="7"/>
+        </g>
+        <path class="mouth mouth-idle" d="M90,103 Q110,113 130,103" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
+      </g>
+    </svg></button>
+
+    <button
+      type="button"
+      class="singer singer--middle"
+      data-key="I"
+      data-role="soft-airy"
+      style="left:55%; z-index:27;"
+      aria-label="Singer I, a soft, airy breath. Click or press I to hear them sing."
+    >
+    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
+      <g class="body-group">
+        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#2f6b52"/>
+        <path d="M90,132 Q110,150 130,132" fill="none" stroke="#1f4a39" stroke-width="4"/>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">I</text>
+      </g>
+      <g class="head-group">
+        
+        <ellipse cx="110" cy="78" rx="43" ry="41" fill="#d9a066"/>
+        
+        <path d="M68,60 A42,40 0 0 1 152,60 L152,44 A42,42 0 0 0 68,44 Z" fill="#8a8a8a"/>
+        <rect x="72" y="10" width="76" height="30" fill="#8a8a8a"/>
+        <g class="eyes">
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="7" ry="7"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="7" ry="7"/>
+        </g>
+        <path class="mouth mouth-idle" d="M99,106 Q110,108 121,106" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
+      </g>
+    </svg></button>
+
+    <button
+      type="button"
+      class="singer singer--back"
+      data-key="A"
+      data-role="bass"
+      style="left:82%; z-index:18;"
+      aria-label="Singer A, bass, a low boom. Click or press A to hear them sing."
+    >
+    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
+      <g class="body-group">
+        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#e8d84a"/>
+        <clipPath id="clip-A"><path d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z"/></clipPath>
+        <g clip-path="url(#clip-A)"><rect x="36" y="150" width="148" height="9" fill="#c2ab2e"/><rect x="36" y="168" width="148" height="9" fill="#c2ab2e"/><rect x="36" y="186" width="148" height="9" fill="#c2ab2e"/><rect x="36" y="204" width="148" height="9" fill="#c2ab2e"/><rect x="36" y="222" width="148" height="9" fill="#c2ab2e"/><rect x="36" y="240" width="148" height="9" fill="#c2ab2e"/></g>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">A</text>
+      </g>
+      <g class="head-group">
+        
+        <ellipse cx="110" cy="78" rx="34" ry="52" fill="#4a2f1f"/>
+        <circle cx="58" cy="55" r="15" fill="#6b2e20"/><circle cx="66" cy="32" r="15" fill="#6b2e20"/><circle cx="82" cy="16" r="15" fill="#6b2e20"/><circle cx="104" cy="8" r="15" fill="#6b2e20"/><circle cx="116" cy="8" r="15" fill="#6b2e20"/><circle cx="138" cy="16" r="15" fill="#6b2e20"/><circle cx="154" cy="32" r="15" fill="#6b2e20"/><circle cx="162" cy="55" r="15" fill="#6b2e20"/><circle cx="70" cy="68" r="15" fill="#6b2e20"/><circle cx="150" cy="68" r="15" fill="#6b2e20"/><circle cx="88" cy="12" r="15" fill="#6b2e20"/><circle cx="132" cy="12" r="15" fill="#6b2e20"/>
+        <g class="eyes">
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="6" ry="6.5"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="6" ry="6.5"/>
+        </g>
+        <path class="mouth mouth-idle" d="M91,108 Q110,114 129,108" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
+      </g>
+    </svg></button>
+
+    <button
+      type="button"
+      class="singer singer--middle"
+      data-key="S"
+      data-role="percussive"
+      style="left:73%; z-index:29;"
+      aria-label="Singer S, a percussive puh. Click or press S to hear them sing."
+    >
+    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
+      <g class="body-group">
+        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#3fae7a"/>
+        
+        <path d="M70,140 Q110,110 150,140 L150,160 Q110,138 70,160 Z" fill="#2c7d57"/>
+        <line x1="102" y1="150" x2="99" y2="172" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        <line x1="118" y1="150" x2="121" y2="172" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">S</text>
+      </g>
+      <g class="head-group">
+        
+        <rect x="71" y="39" width="78" height="78" rx="20" ry="22" fill="#f5d7b5"/>
+        
+        <path d="M66,58 A44,40 0 0 1 154,58 L154,42 A44,44 0 0 0 66,42 Z" fill="#100c0a"/>
+        <circle cx="86" cy="16" r="12" fill="#100c0a"/>
+        <circle cx="134" cy="16" r="12" fill="#100c0a"/>
+        <g class="eyes">
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="6" ry="6.5"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="6" ry="6.5"/>
+        </g>
+        <path class="mouth mouth-idle" d="M95,105 Q110,101 125,105" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
+      </g>
+    </svg></button>
+
+    <button
+      type="button"
+      class="singer singer--front"
+      data-key="D"
+      data-role="breath-tss"
+      style="left:10%; z-index:40;"
+      aria-label="Singer D, a soft tss breath. Click or press D to hear them sing."
+    >
+    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
+      <g class="body-group">
+        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#dbe8f6"/>
+        
+        <path d="M110,132 L88,168 L110,196 L132,168 Z" fill="#f6e8ee"/>
+        <circle cx="110" cy="180" r="3" fill="#5a7ab0"/>
+        <circle cx="110" cy="200" r="3" fill="#5a7ab0"/>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">D</text>
+      </g>
+      <g class="head-group">
+        
+        <path d="M70,72 C70,42 90,30 110,30 C130,30 150,42 150,72 C150,102 130,127 110,140 C90,127 70,102 70,72 Z" fill="#e8b48a"/>
+        
+        <path d="M99,38 L103,6 L110,38 Z" fill="#2b2118"/>
+        <path d="M108,36 L112,2 L118,36 Z" fill="#2b2118"/>
+        <path d="M116,38 L120,6 L127,38 Z" fill="#2b2118"/>
+        <g class="eyes">
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="7" ry="7.5"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="7" ry="7.5"/>
+        </g>
+        <path class="mouth mouth-idle" d="M97,109 Q110,107 123,109" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
+      </g>
+    </svg></button>
+
+    <button
+      type="button"
+      class="singer singer--middle"
+      data-key="F"
+      data-role="hum"
+      style="left:91%; z-index:31;"
+      aria-label="Singer F, a warm mmm hum. Click or press F to hear them sing."
+    >
+    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
+      <g class="body-group">
+        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#b06a8a"/>
+        <rect x="86" y="124" width="48" height="22" rx="10" fill="#8a4a6b"/>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">F</text>
+      </g>
+      <g class="head-group">
+        
+        <path d="M70,72 C70,42 90,30 110,30 C130,30 150,42 150,72 C150,102 130,127 110,140 C90,127 70,102 70,72 Z" fill="#c98a5e"/>
+        <path d="M66,58 A44,42 0 0 1 154,58 L154,40 A44,46 0 0 0 66,40 Z" fill="#6b2e20"/>
+        <g class="eyes">
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="6.5" ry="6"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="6.5" ry="6"/>
+        </g>
+        <path class="mouth mouth-idle" d="M93,110 Q110,116 127,110" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
+      </g>
+    </svg></button>
+
+    <button
+      type="button"
+      class="singer singer--front"
+      data-key="G"
+      data-role="open-ah"
+      style="left:28%; z-index:42;"
+      aria-label="Singer G, an open ah tone. Click or press G to hear them sing."
+    >
+    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
+      <g class="body-group">
+        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#e26b6b"/>
+        <clipPath id="clip-G"><path d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z"/></clipPath>
+        <g clip-path="url(#clip-G)"><rect x="36" y="150" width="148" height="9" fill="#a54a4a"/><rect x="36" y="168" width="148" height="9" fill="#a54a4a"/><rect x="36" y="186" width="148" height="9" fill="#a54a4a"/><rect x="36" y="204" width="148" height="9" fill="#a54a4a"/><rect x="36" y="222" width="148" height="9" fill="#a54a4a"/><rect x="36" y="240" width="148" height="9" fill="#a54a4a"/></g>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">G</text>
+      </g>
+      <g class="head-group">
+        <path d="M60,92 C56,38 84,18 110,18 C136,18 164,38 160,92 L160,176 L150,176 L150,102 C150,62 132,36 110,36 C88,36 70,62 70,102 L70,176 L60,176 Z" fill="#151015"/>
+        <ellipse cx="110" cy="78" rx="49" ry="46" fill="#8a5a3f"/>
+        <path d="M66,58 A44,42 0 0 1 154,58 L154,44 A44,44 0 0 0 66,44 Z" fill="#151015"/>
+        <g class="eyes">
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="8" ry="8"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="8" ry="8"/>
+        </g>
+        <path class="mouth mouth-idle" d="M89,109 Q110,118 131,109" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
+      </g>
+    </svg></button>
+
+    <button
+      type="button"
+      class="singer singer--front"
+      data-key="H"
+      data-role="round-ooh"
+      style="left:46%; z-index:43;"
+      aria-label="Singer H, a round ooh tone. Click or press H to hear them sing."
+    >
+    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
+      <g class="body-group">
+        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#4a7ab0"/>
+        <path d="M110,132 L94,162 L110,182 L126,162 Z" fill="#33587f"/>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">H</text>
+      </g>
+      <g class="head-group">
+        
+        <rect x="69" y="38" width="82" height="80" rx="20" ry="22" fill="#7a4a2d"/>
+        
+        <path d="M66,56 A44,40 0 0 1 154,56 L154,38 A44,44 0 0 0 66,38 Z" fill="#caa23a"/>
+        <circle cx="110" cy="20" r="13" fill="#caa23a"/>
+        <g class="eyes">
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="6.5" ry="7"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="6.5" ry="7"/>
+        </g>
+        <path class="mouth mouth-idle" d="M103,109 a6.5,5.5 0 1,0 13,0 a6.5,5.5 0 1,0 -13,0" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
+      </g>
+    </svg></button>
+
+    <button
+      type="button"
+      class="singer singer--front"
+      data-key="J"
+      data-role="bright-ee"
+      style="left:64%; z-index:44;"
+      aria-label="Singer J, a bright ee tone. Click or press J to hear them sing."
+    >
+    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
+      <g class="body-group">
+        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#fdf6e3"/>
+        
+        <path d="M110,132 L92,132 L104,152 Z" fill="#fdf6e3"/>
+        <path d="M110,132 L128,132 L116,152 Z" fill="#fdf6e3"/>
+        <path d="M108,150 L110,166 L112,150 Z" fill="#c9722a"/>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">J</text>
+      </g>
+      <g class="head-group">
+        
+        <ellipse cx="110" cy="78" rx="36" ry="53" fill="#f0c9a0"/>
+        <circle cx="58" cy="55" r="15" fill="#241c14"/><circle cx="66" cy="32" r="15" fill="#241c14"/><circle cx="82" cy="16" r="15" fill="#241c14"/><circle cx="104" cy="8" r="15" fill="#241c14"/><circle cx="116" cy="8" r="15" fill="#241c14"/><circle cx="138" cy="16" r="15" fill="#241c14"/><circle cx="154" cy="32" r="15" fill="#241c14"/><circle cx="162" cy="55" r="15" fill="#241c14"/><circle cx="70" cy="68" r="15" fill="#241c14"/><circle cx="150" cy="68" r="15" fill="#241c14"/><circle cx="88" cy="12" r="15" fill="#241c14"/><circle cx="132" cy="12" r="15" fill="#241c14"/>
+        <g class="eyes">
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="7" ry="7.5"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="7" ry="7.5"/>
+        </g>
+        <path class="mouth mouth-idle" d="M91,106 Q110,116 129,106" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
+        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
+      </g>
+    </svg></button>
+
+    <button
+      type="button"
+      class="singer singer--front"
+      data-key="K"
+      data-role="soft-airy"
+      style="left:82%; z-index:45;"
+      aria-label="Singer K, a soft, airy breath. Click or press K to hear them sing."
+    >
+    <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
+      <g class="body-group">
+        <path class="torso" d="M36,262 L36,192 C36,150 68,130 110,130 C152,130 184,150 184,192 L184,262 Z" fill="#cbb8e0"/>
+        
+        <line x1="98" y1="134" x2="92" y2="258" stroke="#9a82c2" stroke-width="3"/>
+        <line x1="122" y1="134" x2="128" y2="258" stroke="#9a82c2" stroke-width="3"/>
+        <circle cx="110" cy="176" r="2.6" fill="#9a82c2"/>
+        <circle cx="110" cy="200" r="2.6" fill="#9a82c2"/>
+        <rect class="chest-badge" x="84" y="200" width="52" height="38" rx="10"/>
+        <text class="chest-letter" x="110" y="222" text-anchor="middle">K</text>
+      </g>
+      <g class="head-group">
+        <path d="M62,82 C58,28 84,12 110,12 C136,12 162,28 158,82 C158,114 151,133 140,140 L140,92 C140,60 128,38 110,38 C92,38 80,60 80,92 L80,140 C69,133 62,114 62,82 Z" fill="#4a3020"/>
+        <ellipse cx="110" cy="78" rx="38" ry="49" fill="#d9a066"/>
+        <path d="M64,56 A46,42 0 0 1 156,56 L156,40 A46,44 0 0 0 64,40 Z" fill="#4a3020"/>
+        <g class="eyes">
+          <ellipse class="eye eye-left" cx="92" cy="80" rx="6" ry="6"/>
+          <ellipse class="eye eye-right" cx="128" cy="80" rx="6" ry="6"/>
+        </g>
+        <path class="mouth mouth-idle" d="M99,109 Q110,111 121,109" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
         <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
       </g>
     </svg></button>
