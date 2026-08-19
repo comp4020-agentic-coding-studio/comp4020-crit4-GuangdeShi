@@ -168,6 +168,59 @@ function unison(context: AudioContext, type: OscillatorType, pitch: number, detu
   return { mix, oscs: [osc1, osc2] };
 }
 
+// --- Prototype-only (C4 pass 3): a small, contained humanization pass on
+// exactly two voices (hum, open-ah — see playHum/playOpenAh below) to test
+// whether it moves them away from "clean synth tone" and toward "person
+// singing" before considering it for the rest of the choir. These two
+// helpers are new and are called by nothing else; every other voice's code
+// path is untouched. ---
+
+// A quiet, filtered noise bed mixed under a pitched voice. Real singing
+// always carries a little breath/aspiration noise alongside the tone; a
+// purely tonal oscillator-through-filter voice has none at all, which is
+// part of why it reads as clean/synthetic rather than human.
+function addBreathBed(
+  context: AudioContext,
+  at: number,
+  centerFreq: number,
+  q: number,
+  peak: number,
+  attack: number,
+  hold: number,
+  release: number,
+): { source: AudioBufferSourceNode; filter: BiquadFilterNode; gain: GainNode } {
+  const source = context.createBufferSource();
+  source.buffer = getNoiseBuffer(context);
+  const filter = context.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.value = centerFreq;
+  filter.Q.value = q;
+  const gain = context.createGain();
+  shapeGain(gain, at, attack, hold, release, peak);
+  source.connect(filter);
+  filter.connect(gain);
+  source.start(at);
+  source.stop(at + attack + hold + release + 0.05);
+  return { source, filter, gain };
+}
+
+// A second, faster/shallower LFO onto detune, independent of and additional
+// to the shared addVibrato. Real pitch has small involuntary jitter even
+// before deliberate vibrato kicks in; starting from perfectly flat pitch and
+// only ever adding one clean, deliberate vibrato is one of the clearest
+// "synthesizer" tells versus a person singing.
+function addJitter(context: AudioContext, oscillators: OscillatorNode[], at: number, depthCents: number, rateHz: number): OscillatorNode {
+  const lfo = context.createOscillator();
+  lfo.type = "sine";
+  lfo.frequency.value = rateHz;
+  const depth = context.createGain();
+  depth.gain.value = depthCents;
+  lfo.connect(depth);
+  oscillators.forEach((osc) => depth.connect(osc.detune));
+  lfo.start(at);
+  return lfo;
+}
+
 // --- Lower: a deep sung "boom", not a vowel — a quick downward pitch dip
 // into a chesty low-passed body. ---
 function playBass(context: AudioContext, pitch: number) {
@@ -264,11 +317,17 @@ function playHum(context: AudioContext, pitch: number) {
   shapeGain(gain, at, 0.03, 0.24, 0.34, 0.5);
   nasal.connect(gain);
   const lfo = addVibrato(context, oscs, at, 6, 4.9, 0.25);
+  // Prototype-only (C4 pass 3): a touch of breath noise and pitch jitter,
+  // see addBreathBed/addJitter above.
+  const jitter = addJitter(context, oscs, at, 2, 7.3);
+  const breath = addBreathBed(context, at, Math.max(pitch * 2.2, 450), 0.6, 0.045, 0.05, 0.2, 0.35);
+  const breathSend = connectVoice(breath.gain, 0.18);
   const send = connectVoice(gain, 0.15);
   oscs.forEach((o) => o.start(at));
   oscs.forEach((o) => o.stop(at + 0.66));
   lfo.stop(at + 0.66);
-  cleanupOnEnded(oscs[0], oscs[1], lfo, mix, nasal, gain, send);
+  jitter.stop(at + 0.66);
+  cleanupOnEnded(oscs[0], oscs[1], lfo, jitter, mix, nasal, gain, send, breath.source, breath.filter, breath.gain, breathSend);
 }
 
 // --- Round: open "ah" — unison sawtooth pair through wide-spaced formants
@@ -277,15 +336,47 @@ function playOpenAh(context: AudioContext, pitch: number) {
   const at = context.currentTime;
   const { mix, oscs } = unison(context, "sawtooth", pitch, 9);
   const formant = formants(context, mix, 700, 1150, 6, 7);
+  // Prototype-only (C4 pass 3): a third, higher formant for extra vowel
+  // presence, summed straight into formant.output (a GainNode sums whatever
+  // connects to it) rather than touching the shared two-formant helper.
+  const formant3 = context.createBiquadFilter();
+  formant3.type = "bandpass";
+  formant3.frequency.value = 2700;
+  formant3.Q.value = 5;
+  mix.connect(formant3);
+  const formant3Gain = context.createGain();
+  formant3Gain.gain.value = 0.35;
+  formant3.connect(formant3Gain);
+  formant3Gain.connect(formant.output);
   const gain = context.createGain();
   shapeGain(gain, at, 0.02, 0.16, 0.28, 0.55);
   formant.output.connect(gain);
   const lfo = addVibrato(context, oscs, at, 9, 5.2, 0.14);
+  // Prototype-only: breath noise and pitch jitter, see addBreathBed/addJitter.
+  const jitter = addJitter(context, oscs, at, 2.4, 6.8);
+  const breath = addBreathBed(context, at, Math.max(pitch * 3, 900), 0.55, 0.03, 0.14, 0.24, 0.22);
+  const breathSend = connectVoice(breath.gain, 0.2);
   const send = connectVoice(gain, 0.14);
   oscs.forEach((o) => o.start(at));
   oscs.forEach((o) => o.stop(at + 0.55));
   lfo.stop(at + 0.55);
-  cleanupOnEnded(oscs[0], oscs[1], lfo, mix, gain, send, ...formant.nodes);
+  jitter.stop(at + 0.55);
+  cleanupOnEnded(
+    oscs[0],
+    oscs[1],
+    lfo,
+    jitter,
+    mix,
+    gain,
+    send,
+    ...formant.nodes,
+    formant3,
+    formant3Gain,
+    breath.source,
+    breath.filter,
+    breath.gain,
+    breathSend,
+  );
 }
 
 // --- Round: rounded "ooh" — unison triangle pair through narrow low
