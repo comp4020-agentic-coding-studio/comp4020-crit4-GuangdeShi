@@ -487,8 +487,34 @@ function clothingDetails(s: Singer): string {
   }
 }
 
+// Small cartoon "catchlight" in each eye — a fixed offset off the eye's own
+// center, scaled down for the smallest eyes so it never overruns them.
+function eyeHighlight(cx: number, s: Singer): string {
+  const r = Math.min(2, s.eyeRx * 0.3, s.eyeRy * 0.3);
+  return `<circle class="eye-highlight" cx="${cx - s.eyeRx * 0.3}" cy="${80 - s.eyeRy * 0.3}" r="${r}"/>`;
+}
+
+// Soft cheek colour, positioned as a fraction of each singer's own head size
+// so it sits on the face regardless of faceShape/headRx/headRy.
+function cheekBlush(s: Singer): string {
+  const dx = s.headRx * 0.62;
+  const cy = 78 + s.headRy * 0.32;
+  const rx = s.headRx * 0.22;
+  const ry = s.headRy * 0.14;
+  return `
+    <ellipse class="cheek-blush" cx="${110 - dx}" cy="${cy}" rx="${rx}" ry="${ry}"/>
+    <ellipse class="cheek-blush" cx="${110 + dx}" cy="${cy}" rx="${rx}" ry="${ry}"/>`;
+}
+
 export function renderSinger(s: Singer, index: number): string {
   const rowOrder = { back: 1, middle: 2, front: 3 }[s.row];
+
+  // Idle motion (breathing bob, occasional blink) is a shared CSS animation
+  // per singer, but every singer starting in phase would read as one robotic
+  // pulse rather than a crowd of individuals — offsetting each by a
+  // deterministic, index-derived delay staggers them without randomness.
+  const bobDelay = -((index * 0.53) % 4.6).toFixed(2);
+  const blinkDelay = -((index * 0.71 + 1.1) % 5.4).toFixed(2);
 
   const svg = `
     <svg viewBox="0 0 220 262" class="singer-fig" aria-hidden="true">
@@ -501,13 +527,19 @@ export function renderSinger(s: Singer, index: number): string {
       <g class="head-group">
         ${hairBack(s)}
         ${faceShapePath(s)}
+        ${cheekBlush(s)}
         ${hairFront(s)}
         <g class="eyes">
           <ellipse class="eye eye-left" cx="92" cy="80" rx="${s.eyeRx}" ry="${s.eyeRy}"/>
           <ellipse class="eye eye-right" cx="128" cy="80" rx="${s.eyeRx}" ry="${s.eyeRy}"/>
+          ${eyeHighlight(92, s)}
+          ${eyeHighlight(128, s)}
         </g>
         <path class="mouth mouth-idle" d="${s.mouthIdle}" fill="none" stroke="#5a2f1e" stroke-width="4" stroke-linecap="round"/>
-        <ellipse class="mouth mouth-open" cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
+        <g class="mouth-open">
+          <ellipse cx="110" cy="106" rx="17" ry="19" fill="#3a1810"/>
+          <ellipse cx="110" cy="115" rx="8" ry="6" fill="#c0524a"/>
+        </g>
       </g>
     </svg>`;
 
@@ -518,7 +550,7 @@ export function renderSinger(s: Singer, index: number): string {
       data-key="${s.key}"
       data-role="${s.role}"
       data-pitch="${s.pitch}"
-      style="left:${s.x}%; z-index:${rowOrder * 10 + index};"
+      style="left:${s.x}%; z-index:${rowOrder * 10 + index}; --bob-delay:${bobDelay}s; --blink-delay:${blinkDelay}s;"
       aria-label="Singer ${s.key}, ${s.label}. Click or press ${s.key} to hear them sing."
     >${svg}</button>`;
 }

@@ -117,6 +117,50 @@ main {
   transform: translateX(-50%) translateY(-2%) scale(1.03);
 }
 
+/* Hover is the "come play with me" cue for a mouse/trackpad visitor: the
+   figure brightens (overriding its row's resting dim/shadow filter) and the
+   chest key label lifts out, both readable at a glance before any click. */
+.singer:hover .singer-fig {
+  filter: brightness(1.12) drop-shadow(0 10px 16px rgba(0, 0, 0, 0.5));
+}
+
+.singer:hover .chest-badge {
+  fill: rgba(0, 0, 0, 0.55);
+}
+
+.singer:hover .chest-letter {
+  fill: #fff8e6;
+  stroke: rgba(255, 209, 102, 0.9);
+}
+
+/* A quick radial flash behind the figure on hit — makes the first tap feel
+   like it landed, on top of the existing bounce/eyes/mouth reaction. */
+.singer::after {
+  content: "";
+  position: absolute;
+  inset: -12% -20%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 209, 102, 0.55) 0%, rgba(255, 209, 102, 0) 70%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.singer.is-hit::after {
+  animation: singer-hit-glow 0.45s ease-out;
+}
+
+@keyframes singer-hit-glow {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
 .singer:focus-visible {
   outline: 3px solid #ffd166;
   outline-offset: 4px;
@@ -184,6 +228,53 @@ main {
   fill: #221510;
 }
 
+.eye-highlight {
+  fill: rgba(255, 255, 255, 0.85);
+}
+
+/* Blend rather than a flat fill, so the same warm tone reads as a blush
+   across every skin tone in the palette instead of sitting on top of it. */
+.cheek-blush {
+  fill: #ff8a73;
+  opacity: 0.22;
+  mix-blend-mode: multiply;
+}
+
+/* Idle motion: a slow breathing bob on the whole figure, plus an occasional
+   blink, each singer offset by its own --bob-delay/--blink-delay (set per
+   singer in singers.ts) so sixteen singers don't move in unison — the
+   "someone is standing there, waiting" cue that invites the first tap. */
+.singer-fig {
+  animation: singer-idle-bob 4.6s ease-in-out infinite;
+  animation-delay: var(--bob-delay, 0s);
+}
+
+.eyes {
+  animation: singer-idle-blink 5.4s ease-in-out infinite;
+  animation-delay: var(--blink-delay, 0s);
+}
+
+@keyframes singer-idle-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.5%);
+  }
+}
+
+@keyframes singer-idle-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.12);
+  }
+}
+
 /* Idle: closed/small mouth, eyes at rest. Triggered ("is-hit"): eyes widen,
    mouth swaps to a wide-open shape, and the whole figure does a quick
    squash-stretch-recoil bounce, then settles back to idle automatically
@@ -247,7 +338,10 @@ main {
 
 @media (prefers-reduced-motion: reduce) {
   .singer.is-hit .eyes,
-  .singer.is-hit .singer-fig {
+  .singer.is-hit .singer-fig,
+  .singer-fig,
+  .eyes,
+  .singer.is-hit::after {
     animation: none;
   }
 }
@@ -269,6 +363,7 @@ main {
   background-repeat: no-repeat;
   background-size: contain;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='28' y='26' width='8' height='34' rx='3' fill='%238a5a2f'/%3E%3Crect x='10' y='6' width='30' height='20' rx='4' fill='%23b8bec7'/%3E%3Crect x='10' y='6' width='30' height='7' rx='3' fill='%23dde2e8'/%3E%3C/svg%3E");
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.55));
 }
 
 #hammer.visible {
