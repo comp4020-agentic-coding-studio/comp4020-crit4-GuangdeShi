@@ -240,6 +240,82 @@ main {
   mix-blend-mode: multiply;
 }
 
+/* Prototype visual system (C4 pass 3): only the four singers carrying
+   .singer--v2 use any of this. Eyebrows give the idle face its first real
+   expression; the three-state mouth (idle -> small "o" -> open "ah") and an
+   independent head tilt replace the old instant idle/open swap and rigid
+   whole-figure bounce with something closer to an actual sung phrase. */
+.mouth-o {
+  opacity: 0;
+}
+
+.singer--v2.is-hit .mouth-idle {
+  animation: singer-mouth-idle-out 0.42s ease;
+}
+
+.singer--v2.is-hit .mouth-o {
+  animation: singer-mouth-o-pulse 0.42s ease;
+}
+
+.singer--v2.is-hit .mouth-open {
+  animation: singer-mouth-ah-pulse 0.42s ease;
+}
+
+@keyframes singer-mouth-idle-out {
+  0% {
+    opacity: 1;
+  }
+  20%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes singer-mouth-o-pulse {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  20%,
+  50% {
+    opacity: 1;
+  }
+  65% {
+    opacity: 0;
+  }
+}
+
+@keyframes singer-mouth-ah-pulse {
+  0%,
+  50%,
+  100% {
+    opacity: 0;
+  }
+  65%,
+  90% {
+    opacity: 1;
+  }
+}
+
+.singer--v2.is-hit .head-group {
+  animation: singer-head-sing 0.42s ease;
+  transform-box: fill-box;
+  transform-origin: 50% 85%;
+}
+
+@keyframes singer-head-sing {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  30% {
+    transform: translateY(-3%) rotate(-4deg);
+  }
+  62% {
+    transform: translateY(1%) rotate(3deg);
+  }
+}
+
 /* Idle motion: a slow breathing bob on the whole figure, plus an occasional
    blink, each singer offset by its own --bob-delay/--blink-delay (set per
    singer in singers.ts) so sixteen singers don't move in unison — the
@@ -341,7 +417,11 @@ main {
   .singer.is-hit .singer-fig,
   .singer-fig,
   .eyes,
-  .singer.is-hit::after {
+  .singer.is-hit::after,
+  .singer--v2.is-hit .mouth-idle,
+  .singer--v2.is-hit .mouth-o,
+  .singer--v2.is-hit .mouth-open,
+  .singer--v2.is-hit .head-group {
     animation: none;
   }
 }
