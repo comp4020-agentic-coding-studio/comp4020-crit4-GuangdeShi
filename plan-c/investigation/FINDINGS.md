@@ -84,22 +84,58 @@ static/last-calibrated value rather than a live sensor.
   that non-Pro and some other models expose the same HID shape without live
   data.
 
+## Iteration 2: explicitly enabling reporting (reportID 5)
+
+`lid-angle-enable-test.swift` tried the one remaining plausible lever: the
+correct reporting-state element this time (reportID 5, usage 1156, range
+`[0,2]`, observed at `0`), rather than the wrong report targeted in the
+first pass.
+
+1. **Step 2 — read before touching anything**: `GetReport(5)` →
+   `kIOReturnSuccess`, bytes `[05 00]`. Confirms the `0`/disabled value from
+   the first investigation.
+2. **Step 3 — attempt to enable**: `SetReport(5, value=1)` (write
+   `[05 01]`) returned `IOReturn -536870201` = `0xE00002C7` =
+   **`kIOReturnUnsupported`**. Read-back afterwards still showed `[05 00]`
+   — the write had no effect. Tried `value=2` ("Threshold Events") once as
+   a fallback: same `kIOReturnUnsupported`, same unchanged read-back.
+   Neither write attempt was repeated further, per the experiment's own
+   "don't spam HID writes" constraint.
+3. **Step 4 — re-polled the candidate angle field anyway** (reportID 1) at
+   ~15 Hz for 20 seconds while physically swinging the lid through its full
+   range. Result: `122`/`123` alternating — identical ±1 noise pattern to
+   the very first test, span `1`.
+
+`kIOReturnUnsupported` is a clean, structural answer, not a permissions
+error: `IOHIDDeviceSetReport` for this report shape is rejected by the
+driver outright, not merely denied by a privacy/TCC gate. There is no
+"grant more access and retry" path here — the collection's Feature reports
+on this device do not accept writes in this layout at all. Since nothing
+was successfully changed, no restore step was needed (the script checks
+for this and skips the restore write when the enable attempt had no
+effect).
+
 ## Smallest next experiment worth trying
 
-- Set reportID 5 ("reporting state", observed at `0`/disabled) to `1` via
-  `IOHIDDeviceSetReport` with `kIOHIDReportTypeFeature`, then re-run the
-  same poll — on the off chance the sensor is gated behind an explicit
-  enable and simply wasn't asked to turn on. (Attempted once against the
-  wrong report ID during investigation; not yet tried against the correct
-  one.)
-- Repeat this exact diagnostic on an actual MacBook Pro 14"/16" (2021+),
-  where the sensor is known to work, to confirm the diagnostic script
-  itself is correct and the negative result here is hardware-specific
-  rather than a bug in the approach.
-- If neither works, treat Plan C as blocked on this hardware class and stop
-  — per the spike's own rules, do not substitute a fake input for the real
-  hinge sensor.
+- Repeat both diagnostic scripts (`lid-angle-diagnostic.swift` and
+  `lid-angle-enable-test.swift`) unchanged on an actual MacBook Pro
+  14"/16" (2021+), where this sensor is known to work, to confirm the
+  scripts themselves are correct and that the negative result here is
+  specific to the MacBook Air's hardware/firmware rather than a bug in the
+  approach. This is a more productive use of time than further
+  reverse-engineering register writes against a driver that has already
+  answered "unsupported."
+- Do not attempt further undocumented registers on this machine, and do
+  not substitute a fake/simulated input for the real hinge sensor — per
+  the spike's own ground rules, Plan C is blocked on this hardware class
+  until it can be tried on compatible hardware.
 
 ## Verdict
 
-**PLAN C SENSOR SPIKE: NOT YET VIABLE** (on this MacBook Air / Mac15,12).
+**PLAN C SENSOR SPIKE: NOT VIABLE ON THIS MACBOOK AIR** (Mac15,12). The
+lid-angle HID node exists and can be opened/read/written without any
+permission error, but its data does not reflect real hinge movement, and
+the driver explicitly rejects (`kIOReturnUnsupported`) the one plausible
+enable path found by element enumeration. The next meaningful experiment
+is running the same diagnostics on a compatible MacBook Pro, not spending
+more time reverse-engineering this MacBook Air.

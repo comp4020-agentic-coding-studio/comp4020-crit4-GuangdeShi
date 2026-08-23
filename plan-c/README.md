@@ -6,11 +6,14 @@ angle be read locally and streamed into a browser to control Web Audio?**
 
 See [`investigation/FINDINGS.md`](investigation/FINDINGS.md) for the result.
 
-**Verdict: NOT YET VIABLE on this hardware** (MacBook Air, Mac15,12 / Apple
-M3). The known HID lid-angle node exists and matches the expected identity,
-but its value does not track physical hinge movement on this machine — see
-the findings doc for the full diagnostic trail and the next experiment worth
-trying.
+**Verdict: NOT VIABLE on this hardware** (MacBook Air, Mac15,12 / Apple M3).
+The known HID lid-angle node exists and matches the expected identity, opens
+and reads without any permission error, but its value does not track
+physical hinge movement — and the driver rejects (`kIOReturnUnsupported`)
+the one plausible way found to explicitly enable live reporting. See the
+findings doc for the full diagnostic trail; the next worthwhile step is
+running the same scripts on a MacBook Pro 14"/16" (2021+), not further
+reverse-engineering this machine.
 
 Per the spike's own ground rules, no fake/simulated sensor (slider, mouse
 drag, device-orientation) was substituted, and no browser/audio code was
