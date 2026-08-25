@@ -161,6 +161,17 @@ body {
      and only visible while air is actually moving -- never a fixed idle
      animation, which would read as the graphic making its own noise. */
   animation: bellows-tremor 140ms ease-in-out infinite alternate;
+  /* The bellows itself is the public-fallback drag target (no separate
+     slider/handle) -- cursor + touch-action communicate that it's grabbable
+     and stop a touch-drag from also scrolling the page or selecting text. */
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.bellows.grabbing {
+  cursor: grabbing;
 }
 
 @keyframes bellows-tremor {
@@ -281,18 +292,21 @@ body {
 
 /* ---------- status + telemetry ---------- */
 
-.sensor-status {
+.mode-status {
   margin: 0;
   font-size: 0.75rem;
   letter-spacing: 0.03em;
 }
 
-.sensor-status[data-state="connected"] {
+/* "connected" = the real lid sensor is live (LID BELLOWS). Both other
+   states fall back to drag mode (DRAG BELLOWS) -- this is an instruction,
+   not an error, so it gets a distinguishing colour, not an alarm one. */
+.mode-status[data-state="connected"] {
   color: var(--ok);
 }
 
-.sensor-status[data-state="disconnected"],
-.sensor-status[data-state="connecting"] {
+.mode-status[data-state="disconnected"],
+.mode-status[data-state="connecting"] {
   color: var(--warn);
 }
 

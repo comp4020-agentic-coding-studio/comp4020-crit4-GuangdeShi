@@ -8,8 +8,11 @@ const ANGLE_MAX_DEG = 135;
 // instrument's visual heart (the "physical MacBook screen IS the bellows"),
 // so it should read as unmistakably the dominant element even at rest, and
 // swing through a much larger range as the lid actually opens/closes.
-const BELLOWS_MIN_PX = 140;
-const BELLOWS_MAX_PX = 460;
+// Exported so drag-bellows.ts's pointer-drag fallback clamps its own
+// synthetic extent to the exact same visual range, rather than a second,
+// independently-drifting pair of numbers.
+export const BELLOWS_MIN_PX = 140;
+export const BELLOWS_MAX_PX = 460;
 
 function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
@@ -30,7 +33,16 @@ export class AccordionVisuals {
 
   setAngle(angleDeg: number): void {
     const t = clamp01((angleDeg - ANGLE_MIN_DEG) / (ANGLE_MAX_DEG - ANGLE_MIN_DEG));
-    const px = BELLOWS_MIN_PX + t * (BELLOWS_MAX_PX - BELLOWS_MIN_PX);
+    this.setExtentPx(BELLOWS_MIN_PX + t * (BELLOWS_MAX_PX - BELLOWS_MIN_PX));
+  }
+
+  /**
+   * Sets the bellows visual's extent directly, in pixels. `setAngle` (the
+   * physical-lid path) is just one caller of this; the pointer-drag
+   * fallback in main.ts drives the same property straight from
+   * DragBellows's own tracked extent, since there's no lid angle to read.
+   */
+  setExtentPx(px: number): void {
     this.#bellowsEl.style.setProperty("--bellows-extent", `${px.toFixed(1)}px`);
   }
 

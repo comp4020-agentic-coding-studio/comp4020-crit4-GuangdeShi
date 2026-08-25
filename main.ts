@@ -1,5 +1,6 @@
 import { SensorClient } from "./sensor-client.ts";
 import { BellowsPressure } from "./bellows.ts";
+import { DragBellows } from "./drag-bellows.ts";
 import { AccordionEngine } from "./audio-engine.ts";
 import { KEY_TO_DEF, renderKeyboard } from "./keyboard.ts";
 import { AccordionVisuals } from "./visuals.ts";
@@ -9,7 +10,7 @@ renderKeyboard(
   document.querySelector<HTMLElement>("#black-row")!,
 );
 
-const statusEl = document.querySelector<HTMLElement>("#sensor-status")!;
+const modeStatusEl = document.querySelector<HTMLElement>("#mode-status")!;
 const angleEl = document.querySelector<HTMLElement>("#debug-angle")!;
 const velocityEl = document.querySelector<HTMLElement>("#debug-velocity")!;
 const dynamicEl = document.querySelector<HTMLElement>("#debug-dynamic")!;
@@ -30,27 +31,44 @@ function dynamicLabel(pressure: number): string {
 
 const sensor = new SensorClient();
 const bellows = new BellowsPressure();
+const drag = new DragBellows();
 const engine = new AccordionEngine();
 const visuals = new AccordionVisuals(document);
 
+// Two input modes feed the one shared BellowsPressure/AccordionEngine model
+// below -- the real MacBook lid sensor when it's connected (the primary,
+// intended experience on the hardware this was built for), and pointer/
+// touch dragging on the visual bellows otherwise (so the public GitHub
+// Pages URL is independently playable by a stranger with no native bridge
+// running). Selection is automatic, never a settings toggle: "connecting"
+// (the state before any real telemetry has ever arrived) counts as
+// "sensor unavailable," so a stranger opening the deployed page lands in
+// drag mode immediately rather than sitting in a "waiting for sensor" limbo.
+let sensorConnected = false;
+
 sensor.onStateChange((state) => {
-  statusEl.dataset.state = state;
-  statusEl.textContent = state === "connected" ? "Sensor connected" : "Waiting for MacBook sensor…";
+  sensorConnected = state === "connected";
+  modeStatusEl.dataset.state = state;
+  modeStatusEl.textContent = sensorConnected
+    ? "LID BELLOWS — hold a key, move the screen."
+    : "DRAG BELLOWS — hold a key, drag the bellows.";
 });
 
 let latestVelocity = 0;
 
 sensor.onTelemetry(({ angle, velocity }) => {
   latestVelocity = velocity;
-  visuals.setAngle(angle);
+  if (sensorConnected) visuals.setAngle(angle);
   angleEl.textContent = `${angle.toFixed(1)}°`;
   velocityEl.textContent = `${velocity >= 0 ? "+" : ""}${velocity.toFixed(1)}°/s`;
 });
 
-// Bellows pressure is recomputed every frame (not just on new telemetry) so
-// it keeps decaying smoothly between sensor samples instead of stair-stepping.
+// Bellows pressure is recomputed every frame (not just on new telemetry/drag
+// samples) so it keeps decaying smoothly between them instead of
+// stair-stepping.
 function bellowsLoop(nowMs: number): void {
-  const { pressure, direction } = bellows.update(latestVelocity, nowMs);
+  const velocity = sensorConnected ? latestVelocity : drag.velocity(nowMs);
+  const { pressure, direction } = bellows.update(velocity, nowMs);
   engine.setBellows(pressure, direction);
   visuals.setBellows(pressure, direction);
   dynamicEl.textContent = `${pressure.toFixed(2)} ${dynamicLabel(pressure)}`;
@@ -100,3 +118,37 @@ for (const [key, el] of visuals.keyElements) {
   el.addEventListener("pointerup", () => releaseKey(key));
   el.addEventListener("pointerleave", () => releaseKey(key));
 }
+
+// Public-URL fallback: grab-and-drag the bellows itself with mouse, touch,
+// or pen. Only affects sound while the physical lid sensor isn't connected
+// (see bellowsLoop above) -- dragging is never required, and never
+// overrides, the real MacBook lid. The bellows element is the entire
+// interaction target on purpose (Section 7): no separate slider/handle.
+const bellowsEl = document.querySelector<HTMLElement>("#bellows")!;
+
+bellowsEl.addEventListener("pointerdown", (event) => {
+  event.preventDefault();
+  bellowsEl.setPointerCapture(event.pointerId);
+  bellowsEl.classList.add("grabbing");
+  drag.start(event.clientY, performance.now());
+});
+
+bellowsEl.addEventListener("pointermove", (event) => {
+  if (!drag.isDragging) return;
+  const extentPx = drag.move(event.clientY, performance.now());
+  if (!sensorConnected) visuals.setExtentPx(extentPx);
+});
+
+function endBellowsDrag(event: PointerEvent): void {
+  if (!drag.isDragging) return;
+  drag.end();
+  bellowsEl.classList.remove("grabbing");
+  try {
+    bellowsEl.releasePointerCapture(event.pointerId);
+  } catch {
+    // Already released -- e.g. pointercancel firing after the browser
+    // itself revoked capture (a touch scroll gesture taking over).
+  }
+}
+bellowsEl.addEventListener("pointerup", endBellowsDrag);
+bellowsEl.addEventListener("pointercancel", endBellowsDrag);
