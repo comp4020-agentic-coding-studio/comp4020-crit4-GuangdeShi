@@ -130,7 +130,7 @@ effect).
   the spike's own ground rules, Plan C is blocked on this hardware class
   until it can be tried on compatible hardware.
 
-## Verdict
+## Verdict (superseded below — kept as process evidence, not deleted)
 
 **PLAN C SENSOR SPIKE: NOT VIABLE ON THIS MACBOOK AIR** (Mac15,12). The
 lid-angle HID node exists and can be opened/read/written without any
@@ -139,3 +139,66 @@ the driver explicitly rejects (`kIOReturnUnsupported`) the one plausible
 enable path found by element enumeration. The next meaningful experiment
 is running the same diagnostics on a compatible MacBook Pro, not spending
 more time reverse-engineering this MacBook Air.
+
+## Resumed: cross-check against existing mature implementations
+
+The "not viable" verdict above turned out to be wrong, and this section
+explains why, without deleting the record above (it's real evidence of
+what our own diagnostic actually observed at the time).
+
+1. Our custom HID diagnostic (`lid-angle-diagnostic.swift`) read reportID 1
+   (Feature report, VendorID `0x05AC`/ProductID `0x8104`, UsagePage
+   `0x20`/Usage `0x8A`) and saw it frozen at `122`/`123` across multiple
+   dedicated test windows, with the lid being swung through its full range
+   on cue each time.
+2. We cross-checked against two established, independent open-source lid
+   angle readers: `wangfu91/lid-angle-rs` (Rust, installed via
+   `cargo install lid-angle`) and `samhenrigold/LidAngleSensor` (Swift/
+   SwiftUI, installed as the prebuilt notarized `.app` via
+   `brew install --cask lidanglesensor`).
+3. The user directly observed `LidAngleSensor.app`'s own window: the angle
+   and velocity fields changed continuously and tracked real hinge
+   movement live. This meant the hardware was not the blocker — the earlier
+   "not viable" conclusion was wrong.
+4. We then spent significant effort trying to find a *code*-level
+   explanation for why the installed app's read path would differ from
+   ours: comparing its exact installed version (release tag `1.1`,
+   `gold.samhenri.LidAngleSensor`, notarized, hardened runtime, **empty**
+   entitlements) against `main`; diffing `1.1`'s `findSensor()`/`poll()`
+   against our reader's matching/parsing code (byte-for-byte identical
+   Feature-report parsing: `report[1] | (report[2] << 8)`, report ID 1);
+   and testing whether `1.1`'s non-standard bare `"UsagePage"`/`"Usage"`
+   matching-dictionary keys (vs. our `kIOHIDPrimaryUsagePageKey`/
+   `kIOHIDPrimaryUsageKey`) picked out a *different* HID facet of this
+   composite VendorID/ProductID device. That last hypothesis was tested
+   directly (`plan-c/accordion/native/probe-facets.swift`, matching on
+   VendorID+ProductID only): only **one** of the device's 4 facets
+   (usagePage `0x20`/usage `0x8A`) responds to Feature report 1 at all —
+   the same one our own reader already matches. So it isn't a facet
+   selection bug either.
+5. The actual explanation was simpler and non-code: **our own reader
+   (`plan-c/accordion/native/lid-reader.swift`), unmodified, produces
+   live, correctly-tracking angle/velocity output** when run while the
+   screen is genuinely being moved *during* the sampling window. Every
+   earlier "frozen" result (this file's own `122`/`123` observations
+   included) was captured in a window where physical lid movement was
+   requested but never actually confirmed to be happening at the same
+   moment the reader was sampling — a test-methodology gap, not a
+   hardware or implementation defect. Once reader and physical movement
+   were run at the same time and directly observed together, the reader
+   swept smoothly across a real ~80°-128° range with correctly-signed
+   velocity.
+6. Plan C is resumed on this basis: the sensor is real and readable on
+   this exact machine using a strict `kIOHIDPrimaryUsagePageKey`/
+   `kIOHIDPrimaryUsageKey`-matched Feature-report poll, no code changes
+   needed relative to what we already had. This reversal — including the
+   false lead about facet-matching — is itself useful agentic-development
+   evidence: a plausible, testable hypothesis was formed and directly
+   falsified, and the true cause was a much simpler experimental-control
+   gap than any of the code-level theories.
+
+## Updated verdict
+
+**PLAN C LID ANGLE: VIABLE.** See `plan-c/accordion/native/lid-reader.swift`
+for the working minimal reader and `plan-c/accordion/native/probe-facets.swift`
+for the facet-matching falsification test.
