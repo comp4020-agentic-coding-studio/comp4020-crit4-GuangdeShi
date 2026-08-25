@@ -24,10 +24,14 @@
 // airflow with no open reed makes no note either.
 
 // Harmonic content of the main 8' reed rank: strong fundamental with
-// carefully *unequal*, decreasing partials (f, 2f, 3f, ...) -- a flat/equal
-// spectrum reads as a buzzy synth, not a reed. Tuned by ear for a warm but
-// penetrating, slightly nasal reed body rather than a smooth sine/organ tone.
-const REED_HARMONIC_AMPLITUDES = [1, 0.62, 0.46, 0.27, 0.17, 0.1, 0.05];
+// carefully *unequal* partials, not a flat/equal spectrum (that reads as a
+// buzzy synth, not a reed). A real free reed doesn't just decay smoothly
+// from the fundamental -- its odd partials (3rd, 5th) sit relatively strong
+// against their even neighbours, which is what gives it that nasal, slightly
+// "buzzy-but-warm" penetrating quality instead of a rounder, organ-like
+// decay. The 3rd here is pulled back up close to the 2nd, and a 7th partial
+// is added, for exactly that.
+const REED_HARMONIC_AMPLITUDES = [1, 0.55, 0.5, 0.22, 0.2, 0.1, 0.11, 0.05];
 // The optional lower (16') register is deliberately softer/rounder -- a
 // real sub-octave rank reinforces body without dominating the main reed.
 const SUB_REED_HARMONIC_AMPLITUDES = [1, 0.3, 0.11];
@@ -59,13 +63,17 @@ const AIR_BUS_SMOOTH_TIME_S = 0.03;
 // A held note should still speak *faintly* the instant bellows pressure
 // crosses the dead zone (like a real reed catching residual air), but a
 // motionless bellows must stay silent -- see the pressure>0 gate below.
-const AIR_BUS_MIN_GAIN_WHEN_MOVING = 0.07;
+// Pulled down from an earlier 0.07: a real accordion's pp is much quieter
+// relative to its ff than that, and the wider that gap, the more a slow
+// vs. fast bellows pump actually reads as a volume *swell* rather than an
+// on/off switch.
+const AIR_BUS_MIN_GAIN_WHEN_MOVING = 0.045;
 
 // Bus makeup gain applied after the compressor -- the compressor keeps
 // several open reeds (main + sub-octave, possibly a full chord) from
 // clipping, this brings the overall level back up to something that
 // actually reads as "present" rather than thin.
-const MASTER_GAIN = 1.7;
+const MASTER_GAIN = 1.9;
 
 /** How much slower (as a multiplier >= 1) a reed at this pitch should be to speak, per Section 14. */
 function lowNoteAttackScale(frequencyHz: number): number {
@@ -215,11 +223,14 @@ export class AccordionEngine {
 
     // Gentle bus glue: keeps several open reeds (a full chord, plus each
     // note's own sub-octave reed) from clipping, so MASTER_GAIN can push
-    // the overall level up without harsh distortion.
+    // the overall level up without harsh distortion. Threshold raised and
+    // ratio eased back from an earlier, squashier setting -- a real
+    // accordion's forte still has real dynamic bite to it; over-compressing
+    // the bus flattened a hard bellows push into barely more than a soft one.
     this.#compressor = this.#ctx.createDynamicsCompressor();
-    this.#compressor.threshold.value = -18;
-    this.#compressor.knee.value = 8;
-    this.#compressor.ratio.value = 3.5;
+    this.#compressor.threshold.value = -14;
+    this.#compressor.knee.value = 6;
+    this.#compressor.ratio.value = 2.8;
     this.#compressor.attack.value = 0.003;
     this.#compressor.release.value = 0.2;
 
