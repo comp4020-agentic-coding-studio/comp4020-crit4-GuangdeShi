@@ -1,6 +1,7 @@
 import { SensorClient } from "./sensor-client.ts";
 import { BellowsModel } from "./bellows.ts";
 import { AccordionEngine } from "./audio-engine.ts";
+import { KEY_TO_DEF } from "./keyboard.ts";
 
 const statusEl = document.querySelector<HTMLElement>("#sensor-status")!;
 const angleEl = document.querySelector<HTMLElement>("#debug-angle")!;
@@ -31,3 +32,26 @@ function bellowsLoop(nowMs: number): void {
   requestAnimationFrame(bellowsLoop);
 }
 requestAnimationFrame(bellowsLoop);
+
+const heldKeys = new Set<string>();
+
+window.addEventListener("keydown", (event) => {
+  const key = event.key.toLowerCase();
+  const def = KEY_TO_DEF.get(key);
+  if (!def || heldKeys.has(key)) return; // ignore OS auto-repeat and unmapped keys
+  heldKeys.add(key);
+  void engine.resume();
+  engine.noteOn(key, def.frequency);
+});
+
+window.addEventListener("keyup", (event) => {
+  const key = event.key.toLowerCase();
+  if (!heldKeys.has(key)) return;
+  heldKeys.delete(key);
+  engine.noteOff(key);
+});
+
+window.addEventListener("blur", () => {
+  for (const key of heldKeys) engine.noteOff(key);
+  heldKeys.clear();
+});
