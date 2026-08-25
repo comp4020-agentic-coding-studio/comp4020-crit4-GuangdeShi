@@ -1,0 +1,24 @@
+/* Phase 1 checkpoint styling only -- replaced by the full accordion visual
+   design in a later commit. */
+body {
+  font-family: system-ui, sans-serif;
+  background: #111;
+  color: #eee;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  margin: 0;
+}
+
+main {
+  text-align: center;
+}
+
+#sensor-status[data-state="connected"] {
+  color: #7cd992;
+}
+
+#sensor-status[data-state="disconnected"],
+#sensor-status[data-state="connecting"] {
+  color: #d97c7c;
+}
