@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
+import { KEY_LAYOUT, renderKeyboard } from "../keyboard.ts";
 
 // C4 "An instrument" — the mechanically-checkable lines of the published spec
 // (https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/crits/04-instrument/).
@@ -9,8 +10,6 @@ import { describe, expect, it } from "vitest";
 // is it expressive) are left to the crit — see spec/README.md.
 const DIST = resolve("dist");
 const doc = new JSDOM(readFileSync(join(DIST, "index.html"), "utf8")).window.document;
-
-const KEYS = ["Q", "W", "E", "R", "T", "Y", "U", "I", "A", "S", "D", "F", "G", "H", "J", "K"];
 
 describe("C4: the browser is the instrument", () => {
   it("ships no prerecorded audio samples", () => {
@@ -35,24 +34,42 @@ describe("C4: the browser is the instrument", () => {
       expect(text).not.toContain(forbidden);
     }
   });
+
+  it("ships the bellows and keyboard mount points a stranger's browser will render into", () => {
+    // The keys/bellows themselves are built at runtime by renderKeyboard() (see
+    // keyboard.test.ts / below), not baked into the static page — but the mount
+    // points main.ts writes into must already exist in the shipped HTML.
+    for (const id of ["accordion", "bellows", "keyboard", "white-row", "black-row", "mode-status"]) {
+      expect(doc.getElementById(id), `#${id} missing from shipped index.html`).not.toBeNull();
+    }
+  });
 });
 
-describe("C4: sixteen singers, each keyboard-playable", () => {
-  it("shows exactly one large keyboard letter per singer, matching the suggested mapping", () => {
-    const chestLetters = Array.from(doc.querySelectorAll<HTMLElement>("[data-key]"))
-      .map((el) => el.dataset.key)
-      .filter(Boolean);
-    expect(chestLetters.sort()).toEqual([...KEYS].sort());
-  });
-
-  it("marks every singer as a keyboard focusable, clickable control", () => {
-    const singers = doc.querySelectorAll<HTMLElement>("[data-key]");
-    expect(singers.length).toBeGreaterThan(0);
-    for (const singer of singers) {
-      expect(
-        singer.getAttribute("role") === "button" || singer.tagName === "BUTTON",
-        `singer for key "${singer.dataset.key}" needs a button role so a screen reader and keyboard user can find it`,
-      ).toBe(true);
+describe("C4: every chromatic key, keyboard/mouse/touch playable", () => {
+  it("renders exactly one button per KEY_LAYOUT entry, each keyboard-focusable and clickable", () => {
+    // renderKeyboard is the single place that turns KEY_LAYOUT into DOM — this
+    // exercises it directly (keyboard.test.ts already covers KEY_LAYOUT's own
+    // musical consistency) to guarantee every visible key is a real <button>:
+    // focusable, Enter/Space-activatable, and clickable/tappable by construction.
+    // renderKeyboard calls the ambient `document`, which this test file's node
+    // environment doesn't provide by default, so point it at a scratch JSDOM.
+    const scratch = new JSDOM("<!doctype html><html><body></body></html>").window.document;
+    const previousDocument = (globalThis as { document?: Document }).document;
+    (globalThis as { document?: Document }).document = scratch;
+    let whiteRow: HTMLElement, blackRow: HTMLElement;
+    try {
+      whiteRow = scratch.createElement("div");
+      blackRow = scratch.createElement("div");
+      renderKeyboard(whiteRow, blackRow);
+    } finally {
+      (globalThis as { document?: Document }).document = previousDocument;
+    }
+    const keys = [...whiteRow.querySelectorAll("button.key"), ...blackRow.querySelectorAll("button.key")];
+    expect(keys).toHaveLength(KEY_LAYOUT.length);
+    const renderedKeyAttrs = keys.map((el) => (el as HTMLElement).dataset.key).sort();
+    expect(renderedKeyAttrs).toEqual(KEY_LAYOUT.map((entry) => entry.key).sort());
+    for (const el of keys) {
+      expect(el.tagName, `key "${(el as HTMLElement).dataset.key}" must be a real <button>`).toBe("BUTTON");
     }
   });
 });

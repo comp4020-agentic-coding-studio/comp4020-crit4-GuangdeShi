@@ -301,7 +301,7 @@ export class AccordionEngine {
     this.#limiter.release.value = 0.1;
 
     this.#softClip = this.#ctx.createWaveShaper();
-    this.#softClip.curve = buildSoftClipCurve();
+    this.#softClip.curve = buildSoftClipCurve() as Float32Array<ArrayBuffer>;
     this.#softClip.oversample = "4x"; // reduces aliasing from the nonlinearity into harsh digital buzzing
 
     this.#airBus.connect(this.#brightnessFilter);

@@ -11,7 +11,7 @@ BRIDGE_PID=$!
 trap 'kill "$BRIDGE_PID" 2>/dev/null || true' EXIT
 
 echo ""
-echo "Open http://localhost:5173/plan-c/accordion/ once the dev server is ready."
+echo "Open http://localhost:5173/ once the dev server is ready."
 echo ""
 
 pnpm dev

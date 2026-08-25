@@ -3,10 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MacBook Accordion (Plan C spike)</title>
-    <link rel="stylesheet" href="./src/styles.css" />
+    <title>MacBook Accordion</title>
+    <meta
+      name="description"
+      content="A live-synthesised accordion: physical/on-screen keys pick the note, the MacBook's own lid (or a dragged on-screen bellows on the public page) supplies the air."
+    />
+    <meta property="og:image" content="./card.png" />
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <nav aria-label="Primary"><a href="./">Home</a></nav>
     <main class="stage">
       <header class="masthead">
         <h1>MacBook Accordion</h1>
@@ -39,13 +45,13 @@
         </section>
       </div>
 
-      <p id="sensor-status" class="sensor-status" data-state="connecting">Waiting for MacBook sensor…</p>
+      <p id="mode-status" class="mode-status" data-state="connecting">DRAG BELLOWS — hold a key, drag the bellows.</p>
       <div class="telemetry" id="telemetry">
         <span>∠<span id="debug-angle">--</span></span>
         <span>ω<span id="debug-velocity">--</span></span>
         <span>♪<span id="debug-dynamic">--</span></span>
       </div>
     </main>
-    <script type="module" src="./src/main.ts"></script>
+    <script type="module" src="./main.ts"></script>
   </body>
 </html>
