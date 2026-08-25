@@ -4,8 +4,8 @@
 
 const ANGLE_MIN_DEG = 80;
 const ANGLE_MAX_DEG = 135;
-const BELLOWS_MIN_PX = 46;
-const BELLOWS_MAX_PX = 230;
+const BELLOWS_MIN_PX = 100;
+const BELLOWS_MAX_PX = 340;
 
 function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
