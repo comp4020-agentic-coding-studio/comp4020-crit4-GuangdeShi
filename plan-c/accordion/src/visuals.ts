@@ -4,8 +4,12 @@
 
 const ANGLE_MIN_DEG = 80;
 const ANGLE_MAX_DEG = 135;
-const BELLOWS_MIN_PX = 100;
-const BELLOWS_MAX_PX = 340;
+// Widened from an earlier 100-340px range: the bellows is meant to be the
+// instrument's visual heart (the "physical MacBook screen IS the bellows"),
+// so it should read as unmistakably the dominant element even at rest, and
+// swing through a much larger range as the lid actually opens/closes.
+const BELLOWS_MIN_PX = 140;
+const BELLOWS_MAX_PX = 460;
 
 function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));

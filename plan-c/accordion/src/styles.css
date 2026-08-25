@@ -139,13 +139,16 @@ body {
 /* ---------- bellows (large, dominant, height-driven) ---------- */
 
 .bellows {
-  --bellows-extent: 160px;
+  --bellows-extent: 200px;
   --bellows-pressure: 0;
   /* min()'d against a viewport-relative cap so a JS-set extent can never
-     force the instrument taller than fits comfortably, no breakpoint needed. */
-  height: min(var(--bellows-extent), 46vh);
-  min-height: clamp(90px, 26vw, 150px);
-  max-height: 360px;
+     force the instrument taller than fits comfortably, no breakpoint needed.
+     Raised from an earlier 46vh/360px ceiling and 90px/150px floor -- the
+     bellows is the instrument's visual heart and should dominate the
+     composition even before the lid moves, not just once it's fully open. */
+  height: min(var(--bellows-extent), 58vh);
+  min-height: clamp(120px, 32vw, 190px);
+  max-height: 480px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -153,6 +156,20 @@ body {
   padding: 6px clamp(14px, 4vw, 26px);
   transition: height 90ms linear;
   box-shadow: inset 0 0 calc(10px + 24px * var(--bellows-pressure)) rgba(255, 208, 120, calc(0.1 + 0.35 * var(--bellows-pressure)));
+  /* Angular velocity -> motion intensity: a small side-to-side tremor whose
+     amplitude is driven by --bellows-pressure, so it's imperceptible at rest
+     and only visible while air is actually moving -- never a fixed idle
+     animation, which would read as the graphic making its own noise. */
+  animation: bellows-tremor 140ms ease-in-out infinite alternate;
+}
+
+@keyframes bellows-tremor {
+  from {
+    transform: translateX(calc(-1.5px * var(--bellows-pressure)));
+  }
+  to {
+    transform: translateX(calc(1.5px * var(--bellows-pressure)));
+  }
 }
 
 .bellows .fold {
