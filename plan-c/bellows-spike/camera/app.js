@@ -14,9 +14,43 @@ const video = document.getElementById('video');
 const canvas = document.getElementById('tiny');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
 const statusEl = document.getElementById('status');
+const audioBtn = document.getElementById('audioBtn');
 
 canvas.width = W;
 canvas.height = H;
+
+// Optional mini Web Audio proof: one sustained reed-like note (C4), gain
+// driven by the camera's movement strength. Both OPENING and CLOSING map
+// to sound -- direction doesn't change pitch, only whether the note is
+// "STILL-quiet" or "moving-louder".
+let audioCtx = null;
+let gainNode = null;
+
+function gainForStrength(strength) {
+  // 0 -> almost silent, 0.3 -> quiet, 0.7 -> louder, 1 -> loud
+  return 0.02 + strength * 0.5;
+}
+
+audioBtn.addEventListener('click', () => {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sawtooth';
+  osc.frequency.value = 261.63; // C4
+  gainNode = audioCtx.createGain();
+  gainNode.gain.value = 0.02;
+  osc.connect(gainNode).connect(audioCtx.destination);
+  osc.start();
+  audioBtn.textContent = 'bellows note: on';
+  audioBtn.disabled = true;
+});
+
+function updateAudio(state, strength) {
+  if (!gainNode) return null;
+  const target = state === 'STILL' ? 0.02 : gainForStrength(strength);
+  gainNode.gain.setTargetAtTime(target, audioCtx.currentTime, 0.05);
+  return target;
+}
 
 let prevProfile = null;
 let smoothedShift = 0;
@@ -68,7 +102,7 @@ function meanAbsDiff(prev, now) {
   return sum / now.length;
 }
 
-async function logSample(state, strength, rawShift, activity) {
+async function logSample(state, strength, rawShift, activity, gain) {
   const now = performance.now();
   if (now - lastLog < 120) return; // throttle to ~8Hz
   lastLog = now;
@@ -82,6 +116,7 @@ async function logSample(state, strength, rawShift, activity) {
         strength: +strength.toFixed(2),
         rawShift: +rawShift.toFixed(2),
         activity: +activity.toFixed(1),
+        gain: gain != null ? +gain.toFixed(3) : null,
       }),
     });
   } catch (e) { /* logging server not reachable -- ignore, UI still works */ }
@@ -124,7 +159,8 @@ ${strength.toFixed(2)}
 
 (raw shift ${smoothedShift.toFixed(2)}, activity ${smoothedActivity.toFixed(1)})`;
 
-    logSample(state, strength, smoothedShift, smoothedActivity);
+    const gain = updateAudio(state, strength);
+    logSample(state, strength, smoothedShift, smoothedActivity, gain);
   }
   prevProfile = profile;
 }
