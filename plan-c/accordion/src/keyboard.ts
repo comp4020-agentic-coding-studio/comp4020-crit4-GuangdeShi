@@ -1,13 +1,22 @@
-// Physical-keyboard -> melody-key mapping.
+// Physical-keyboard -> accordion-keyboard mapping.
 //
-// Two full chromatic octaves (C3-C5, 25 notes), spread across three rows the
-// way a real virtual-piano-on-a-QWERTY-keyboard convention does: the lower
-// letter row and home row carry the white (diatonic) keys of the two
-// octaves, and the row above -- QWERTYUIOP -- carries all ten black
-// (sharp) keys, each one sitting above the gap between its two neighbouring
-// white keys, same as a real keyboard. A stranger can still find a
-// recognisable run of white notes under each hand, with the full chromatic
-// set available via the row above.
+// KEY_LAYOUT is the single source of truth for the instrument's chromatic
+// piano-accordion manual: every white/black key rendered in the DOM (see
+// renderKeyboard) and every pitch the audio engine can play (see
+// KEY_TO_DEF) comes from this one array. There is no separate hard-coded
+// list of DOM buttons or audio notes to drift out of sync -- a key that
+// isn't in here can't render, and a key rendered from here always has a
+// matching frequency (see keyboard.test.ts for the automated check).
+//
+// Two full chromatic octaves (C3-C5, 25 notes: 15 white, 10 black), spread
+// across three rows the way a real virtual-piano-on-a-QWERTY-keyboard
+// convention does: the lower letter row and home row carry the white
+// (diatonic) keys of the two octaves, and the row above -- QWERTYUIOP --
+// carries all ten black (sharp) keys, each one sitting above the gap
+// between its two neighbouring white keys, same as a real keyboard, with
+// no black key between E/F or B/C, same as a real piano. A stranger can
+// still find a recognisable run of white notes under each hand, with the
+// full chromatic set available via the row above.
 
 export interface KeyDefinition {
   note: string;
