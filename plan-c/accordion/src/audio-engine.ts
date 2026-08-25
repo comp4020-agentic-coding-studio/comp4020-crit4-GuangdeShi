@@ -11,12 +11,20 @@
 const HARMONIC_AMPLITUDES = [1, 0.55, 0.38, 0.22, 0.14, 0.08, 0.05];
 const DETUNE_CENTS = [-7, 0, 7];
 
-const NOTE_ATTACK_S = 0.02;
+// Attack tightens as bellows pressure rises -- a hard, fast push/pull
+// makes a reed speak almost instantly, a gentle one takes a beat longer.
+const NOTE_ATTACK_MAX_S = 0.09;
+const NOTE_ATTACK_MIN_S = 0.015;
 const NOTE_RELEASE_S = 0.12;
 const VOICE_CLEANUP_DELAY_S = NOTE_RELEASE_S + 0.1;
 
 const BELLOWS_SMOOTH_TIME_S = 0.03;
 const SILENT_BELLOWS_FLOOR = 0.04;
+
+// A thin layer of filtered air/reed noise, audible only while the bellows
+// actually has pressure -- otherwise sustained notes read as too "clean"
+// and electronic.
+const NOISE_PEAK_GAIN = 0.025;
 
 interface Voice {
   oscillators: OscillatorNode[];
@@ -30,7 +38,9 @@ export class AccordionEngine {
   #bellowsGain: GainNode;
   #brightnessFilter: BiquadFilterNode;
   #bodyFilter: BiquadFilterNode;
+  #noiseGain: GainNode;
   #voices = new Map<string, Voice>();
+  #currentPressure = 0;
 
   constructor() {
     this.#ctx = new AudioContext();
@@ -53,6 +63,20 @@ export class AccordionEngine {
     this.#bellowsGain.connect(this.#brightnessFilter);
     this.#brightnessFilter.connect(this.#bodyFilter);
     this.#bodyFilter.connect(this.#ctx.destination);
+
+    this.#noiseGain = this.#ctx.createGain();
+    this.#noiseGain.gain.value = 0;
+    const noiseFilter = this.#ctx.createBiquadFilter();
+    noiseFilter.type = "bandpass";
+    noiseFilter.frequency.value = 4200;
+    noiseFilter.Q.value = 0.6;
+    const noise = this.#ctx.createBufferSource();
+    noise.buffer = this.#buildNoiseBuffer();
+    noise.loop = true;
+    noise.connect(noiseFilter);
+    noiseFilter.connect(this.#noiseGain);
+    this.#noiseGain.connect(this.#bellowsGain);
+    noise.start();
   }
 
   /** Resumes the AudioContext; must be called from a user gesture (keydown). */
@@ -65,12 +89,14 @@ export class AccordionEngine {
    * @param direction -1 (push) / 0 (rest) / 1 (pull) -- colours the tone subtly.
    */
   setBellows(pressure: number, direction: -1 | 0 | 1): void {
+    this.#currentPressure = pressure;
     const now = this.#ctx.currentTime;
     // A silent bellows should still let a freshly-struck key speak a touch
     // (like a real reed getting a little residual air), rather than going
     // fully mute -- but a *stationary* screen must never sustain a note.
     const audibleGain = SILENT_BELLOWS_FLOOR + pressure * (1 - SILENT_BELLOWS_FLOOR);
     this.#bellowsGain.gain.setTargetAtTime(pressure > 0.001 ? audibleGain : 0, now, BELLOWS_SMOOTH_TIME_S);
+    this.#noiseGain.gain.setTargetAtTime(pressure * NOISE_PEAK_GAIN, now, BELLOWS_SMOOTH_TIME_S);
 
     // Push brightens slightly, pull darkens slightly -- a small, physical-
     // feeling asymmetry rather than a dramatic effect.
@@ -84,9 +110,10 @@ export class AccordionEngine {
     if (this.#voices.has(id)) return; // ignore duplicate on (e.g. OS key auto-repeat)
 
     const now = this.#ctx.currentTime;
+    const attackS = Math.max(NOTE_ATTACK_MIN_S, NOTE_ATTACK_MAX_S - this.#currentPressure * (NOTE_ATTACK_MAX_S - NOTE_ATTACK_MIN_S));
     const gain = this.#ctx.createGain();
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(1, now + NOTE_ATTACK_S);
+    gain.gain.linearRampToValueAtTime(1, now + attackS);
     gain.connect(this.#bellowsGain);
 
     const oscillators = DETUNE_CENTS.map((cents) => {
@@ -119,6 +146,14 @@ export class AccordionEngine {
       voice.gain.disconnect();
       this.#voices.delete(id);
     }, VOICE_CLEANUP_DELAY_S * 1000);
+  }
+
+  #buildNoiseBuffer(): AudioBuffer {
+    const durationS = 2;
+    const buffer = this.#ctx.createBuffer(1, this.#ctx.sampleRate * durationS, this.#ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    return buffer;
   }
 
   #buildReedWave(): PeriodicWave {
