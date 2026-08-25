@@ -1,8 +1,13 @@
 import { SensorClient } from "./sensor-client.ts";
 import { BellowsModel } from "./bellows.ts";
 import { AccordionEngine } from "./audio-engine.ts";
-import { KEY_TO_DEF } from "./keyboard.ts";
+import { KEY_TO_DEF, renderKeyboard } from "./keyboard.ts";
 import { AccordionVisuals } from "./visuals.ts";
+
+renderKeyboard(
+  document.querySelector<HTMLElement>("#white-row")!,
+  document.querySelector<HTMLElement>("#black-row")!,
+);
 
 const statusEl = document.querySelector<HTMLElement>("#sensor-status")!;
 const angleEl = document.querySelector<HTMLElement>("#debug-angle")!;
@@ -55,7 +60,16 @@ function releaseKey(key: string): void {
   engine.noteOff(key);
 }
 
-window.addEventListener("keydown", (event) => pressKey(event.key.toLowerCase()));
+window.addEventListener("keydown", (event) => {
+  // Modifier combos (Cmd+A "select all", etc.) are never note input --
+  // ignoring them here also stops the browser's own shortcut from firing
+  // alongside a note by accident.
+  if (event.metaKey || event.ctrlKey || event.altKey) return;
+  const key = event.key.toLowerCase();
+  if (!KEY_TO_DEF.has(key)) return;
+  event.preventDefault();
+  pressKey(key);
+});
 window.addEventListener("keyup", (event) => releaseKey(event.key.toLowerCase()));
 window.addEventListener("blur", () => {
   for (const key of [...heldKeys]) releaseKey(key);

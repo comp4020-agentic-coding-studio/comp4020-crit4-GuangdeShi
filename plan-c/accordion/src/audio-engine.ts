@@ -107,10 +107,24 @@ export class AccordionEngine {
   }
 
   noteOn(id: string, frequency: number): void {
-    if (this.#voices.has(id)) return; // ignore duplicate on (e.g. OS key auto-repeat)
-
     const now = this.#ctx.currentTime;
     const attackS = Math.max(NOTE_ATTACK_MIN_S, NOTE_ATTACK_MAX_S - this.#currentPressure * (NOTE_ATTACK_MAX_S - NOTE_ATTACK_MIN_S));
+
+    const releasing = this.#voices.get(id);
+    if (releasing) {
+      if (releasing.stopTimeout === null) return; // still fully held, ignore duplicate on
+      // The same key was released and pressed again before its old voice's
+      // cleanup timer fired -- retrigger it in place instead of silently
+      // dropping the new note-on (this was the cause of keys "not sounding"
+      // on quick repeat presses).
+      clearTimeout(releasing.stopTimeout);
+      releasing.stopTimeout = null;
+      releasing.gain.gain.cancelScheduledValues(now);
+      releasing.gain.gain.setValueAtTime(releasing.gain.gain.value, now);
+      releasing.gain.gain.linearRampToValueAtTime(1, now + attackS);
+      return;
+    }
+
     const gain = this.#ctx.createGain();
     gain.gain.setValueAtTime(0, now);
     gain.gain.linearRampToValueAtTime(1, now + attackS);
