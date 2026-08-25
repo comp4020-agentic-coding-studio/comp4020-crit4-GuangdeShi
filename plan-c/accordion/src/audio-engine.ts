@@ -1,94 +1,221 @@
-// Accordion-style Web Audio voice.
+// Piano-accordion instrument model.
 //
-// Not a plain oscillator or organ pad: each note is a small bank of
-// slightly-detuned reed oscillators sharing a hand-built harmonic spectrum
-// (via createPeriodicWave), so voices beat gently against each other the
-// way real accordion reeds (musette tuning) do, plus a softer sub-octave
-// "bass reed" register for body -- a real accordion sounds fuller than a
-// single reed rank, and a plain unison oscillator reads as thin/generic.
-// The whole instrument runs through a shared "bellows" gain bus, two
-// filters that brighten/darken with bellows pressure and push/pull
-// direction (reed-chamber body resonance), and a gentle bus compressor +
-// makeup gain so it can be driven hot without harsh digital clipping.
+// The physical instrument this imitates works like this: the KEYBOARD
+// selects which reed/pitch is allowed to sound (a "valve" opening onto that
+// reed), and the BELLOWS supply the airflow that makes an open valve
+// audible -- airflow controls loudness/expression, never pitch. Holding a
+// key with a still bellows should be close to silent; the same key stays
+// exactly the same pitch whether the bellows are pushing or pulling.
+//
+// That maps onto three pieces here:
+//   - ReedBank    the fixed harmonic "instrument" -- the waveforms shared by
+//                 every note, standing in for a real reed's fixed timbre.
+//   - NoteValve   one held key's oscillator bank + envelope. Exists only
+//                 while that key is down (plus a short release tail).
+//   - AccordionEngine
+//                 wires open valves into a single shared air bus so every
+//                 sounding note rises and falls together with one bellows
+//                 pressure, the way a real accordion's air chamber feeds
+//                 every open reed at once (Section 15: bellows is a GLOBAL
+//                 expression source, not per-note).
+//
+// There is deliberately no standalone "bellows noise" here: moving the
+// screen with no key held must be silent, because on a real accordion
+// airflow with no open reed makes no note either.
 
-// Manually normalized (see #buildWave) rather than relying on
-// createPeriodicWave's own normalization, which would otherwise silently
-// pick whatever peak-scaling it wants and make the actual loudness hard to
-// reason about or tune.
-const REED_HARMONIC_AMPLITUDES = [1, 0.55, 0.38, 0.22, 0.14, 0.08, 0.05];
-const SUB_HARMONIC_AMPLITUDES = [1, 0.3, 0.1];
+// Harmonic content of the main 8' reed rank: strong fundamental with
+// carefully *unequal*, decreasing partials (f, 2f, 3f, ...) -- a flat/equal
+// spectrum reads as a buzzy synth, not a reed. Tuned by ear for a warm but
+// penetrating, slightly nasal reed body rather than a smooth sine/organ tone.
+const REED_HARMONIC_AMPLITUDES = [1, 0.62, 0.46, 0.27, 0.17, 0.1, 0.05];
+// The optional lower (16') register is deliberately softer/rounder -- a
+// real sub-octave rank reinforces body without dominating the main reed.
+const SUB_REED_HARMONIC_AMPLITUDES = [1, 0.3, 0.11];
 const REED_PEAK = 0.9;
-const SUB_PEAK = 0.9;
+const SUB_REED_PEAK = 0.9;
 
+// Two 8' reeds tuned a few cents apart (plus the centre) beat gently
+// against each other -- the classic accordion "musette" character. Kept
+// narrow deliberately: wider and it reads as a supersaw synth, not two
+// reeds of the same rank.
 const DETUNE_CENTS = [-7, 0, 7];
 const SUB_OCTAVE_SEMITONES = -12;
 const SUB_OCTAVE_GAIN = 0.4;
 
-// Attack tightens as bellows pressure rises -- a hard, fast push/pull
+// Attack tightens as bellows pressure rises -- a hard, fast bellows push
 // makes a reed speak almost instantly, a gentle one takes a beat longer.
 const NOTE_ATTACK_MAX_S = 0.09;
 const NOTE_ATTACK_MIN_S = 0.015;
 const NOTE_RELEASE_S = 0.12;
 const VOICE_CLEANUP_DELAY_S = NOTE_RELEASE_S + 0.1;
 
-const BELLOWS_SMOOTH_TIME_S = 0.03;
-// Held-at-rest notes should still be faintly present (a real reed gets a
-// little residual air), but clearly quieter than anything actually being
-// bellowed -- this is a balance point, not "as quiet as possible".
-const SILENT_BELLOWS_FLOOR = 0.07;
+// Real accordion reeds: lower/heavier reeds need somewhat more air to
+// speak fully than high ones. Modelled as a small attack-time penalty
+// below middle C, capped low so no key ever reads as broken or delayed.
+const LOW_NOTE_REFERENCE_FREQUENCY_HZ = 261.63; // C4
+const LOW_NOTE_MAX_ATTACK_SCALE = 1.3;
 
-// A thin layer of filtered air/reed noise, audible only while the bellows
-// actually has pressure -- otherwise sustained notes read as too "clean"
-// and electronic.
-const NOISE_PEAK_GAIN = 0.04;
+const AIR_BUS_SMOOTH_TIME_S = 0.03;
+// A held note should still speak *faintly* the instant bellows pressure
+// crosses the dead zone (like a real reed catching residual air), but a
+// motionless bellows must stay silent -- see the pressure>0 gate below.
+const AIR_BUS_MIN_GAIN_WHEN_MOVING = 0.07;
 
 // Bus makeup gain applied after the compressor -- the compressor keeps
-// summed voices + noise from clipping, this brings the overall level back
-// up to something that actually reads as "present" rather than "thin".
+// several open reeds (main + sub-octave, possibly a full chord) from
+// clipping, this brings the overall level back up to something that
+// actually reads as "present" rather than thin.
 const MASTER_GAIN = 1.7;
 
-interface Voice {
-  oscillators: OscillatorNode[];
-  helperNodes: AudioNode[];
-  gain: GainNode;
-  stopTimeout: ReturnType<typeof setTimeout> | null;
+/** How much slower (as a multiplier >= 1) a reed at this pitch should be to speak, per Section 14. */
+function lowNoteAttackScale(frequencyHz: number): number {
+  const ratio = LOW_NOTE_REFERENCE_FREQUENCY_HZ / frequencyHz;
+  return Math.min(LOW_NOTE_MAX_ATTACK_SCALE, Math.max(1, ratio));
+}
+
+/** The instrument's fixed timbre: the harmonic waveforms shared by every note. */
+class ReedBank {
+  readonly eightFootWave: PeriodicWave;
+  readonly sixteenFootWave: PeriodicWave;
+
+  constructor(ctx: AudioContext) {
+    this.eightFootWave = ReedBank.#buildWave(ctx, REED_HARMONIC_AMPLITUDES, REED_PEAK);
+    this.sixteenFootWave = ReedBank.#buildWave(ctx, SUB_REED_HARMONIC_AMPLITUDES, SUB_REED_PEAK);
+  }
+
+  /**
+   * Builds a harmonic PeriodicWave with a manually controlled peak, rather
+   * than letting createPeriodicWave's own normalization pick an
+   * unpredictable scale. `sum(|amplitude|)` is a safe upper bound on the
+   * resulting waveform's peak, so scaling by it keeps the final peak at
+   * `targetPeak` regardless of how many harmonics are mixed in.
+   */
+  static #buildWave(ctx: AudioContext, amplitudes: number[], targetPeak: number): PeriodicWave {
+    const sum = amplitudes.reduce((total, amplitude) => total + amplitude, 0);
+    const scale = targetPeak / sum;
+    const real = new Float32Array(amplitudes.length + 1);
+    const imag = new Float32Array(amplitudes.length + 1);
+    amplitudes.forEach((amplitude, index) => {
+      imag[index + 1] = amplitude * scale;
+    });
+    return ctx.createPeriodicWave(real, imag, { disableNormalization: true });
+  }
+}
+
+/**
+ * One held key's reed voice: the 8' musette bank (three slightly detuned
+ * oscillators) plus a softer 16' sub-octave reed, sharing a single
+ * per-note envelope gain. A NoteValve exists only while its key is open
+ * (down) plus a short release tail -- it is the "valve" that lets airflow
+ * from the shared air bus reach this particular pitch.
+ */
+class NoteValve {
+  #ctx: AudioContext;
+  #oscillators: OscillatorNode[] = [];
+  #gain: GainNode;
+  #stopTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(ctx: AudioContext, reedBank: ReedBank, destination: AudioNode, frequency: number, attackS: number) {
+    this.#ctx = ctx;
+    const now = ctx.currentTime;
+
+    this.#gain = ctx.createGain();
+    this.#gain.gain.setValueAtTime(0, now);
+    this.#gain.gain.linearRampToValueAtTime(1, now + attackS);
+    this.#gain.connect(destination);
+
+    for (const cents of DETUNE_CENTS) {
+      const osc = ctx.createOscillator();
+      osc.setPeriodicWave(reedBank.eightFootWave);
+      osc.frequency.value = frequency;
+      osc.detune.value = cents;
+      osc.connect(this.#gain);
+      osc.start(now);
+      this.#oscillators.push(osc);
+    }
+
+    const subGain = ctx.createGain();
+    subGain.gain.value = SUB_OCTAVE_GAIN;
+    subGain.connect(this.#gain);
+    const subOsc = ctx.createOscillator();
+    subOsc.setPeriodicWave(reedBank.sixteenFootWave);
+    subOsc.frequency.value = frequency * Math.pow(2, SUB_OCTAVE_SEMITONES / 12);
+    subOsc.connect(subGain);
+    subOsc.start(now);
+    this.#oscillators.push(subOsc);
+  }
+
+  /** True while this valve is fully open (key still held, not mid-release). */
+  get isOpen(): boolean {
+    return this.#stopTimeout === null;
+  }
+
+  /** Re-opens a valve that was mid-release, reusing its existing oscillators instead of dropping the note. */
+  reopen(attackS: number): void {
+    if (this.#stopTimeout === null) return;
+    clearTimeout(this.#stopTimeout);
+    this.#stopTimeout = null;
+    const now = this.#ctx.currentTime;
+    this.#gain.gain.cancelScheduledValues(now);
+    this.#gain.gain.setValueAtTime(this.#gain.gain.value, now);
+    this.#gain.gain.linearRampToValueAtTime(1, now + attackS);
+  }
+
+  /** Begins closing the valve (key released); schedules final cleanup after the release tail. */
+  close(onFinished: () => void): void {
+    if (this.#stopTimeout !== null) return; // already closing
+    const now = this.#ctx.currentTime;
+    this.#gain.gain.cancelScheduledValues(now);
+    this.#gain.gain.setValueAtTime(this.#gain.gain.value, now);
+    this.#gain.gain.linearRampToValueAtTime(0, now + NOTE_RELEASE_S);
+    this.#stopTimeout = setTimeout(() => {
+      for (const osc of this.#oscillators) {
+        osc.stop();
+        osc.disconnect();
+      }
+      this.#gain.disconnect();
+      onFinished();
+    }, VOICE_CLEANUP_DELAY_S * 1000);
+  }
 }
 
 export class AccordionEngine {
   #ctx: AudioContext;
-  #reedWave: PeriodicWave;
-  #subWave: PeriodicWave;
-  #bellowsGain: GainNode;
+  #reedBank: ReedBank;
+  // The shared "air bus": every open NoteValve feeds into this single gain
+  // node, which the bellows pressure drives directly. This is what makes
+  // polyphony behave like a real accordion (Section 15) -- one bellows
+  // pressure raises/lowers every currently-sounding reed together, rather
+  // than each note having its own independent dynamics.
+  #airBus: GainNode;
   #brightnessFilter: BiquadFilterNode;
   #bodyFilter: BiquadFilterNode;
   #compressor: DynamicsCompressorNode;
   #masterGain: GainNode;
-  #noiseGain: GainNode;
-  #voices = new Map<string, Voice>();
+  #valves = new Map<string, NoteValve>();
   #currentPressure = 0;
 
   constructor() {
     this.#ctx = new AudioContext();
-    this.#reedWave = this.#buildWave(REED_HARMONIC_AMPLITUDES, REED_PEAK);
-    this.#subWave = this.#buildWave(SUB_HARMONIC_AMPLITUDES, SUB_PEAK);
+    this.#reedBank = new ReedBank(this.#ctx);
 
-    this.#bellowsGain = this.#ctx.createGain();
-    this.#bellowsGain.gain.value = 0;
+    this.#airBus = this.#ctx.createGain();
+    this.#airBus.gain.value = 0;
 
     this.#brightnessFilter = this.#ctx.createBiquadFilter();
     this.#brightnessFilter.type = "peaking";
     this.#brightnessFilter.frequency.value = 1400;
     this.#brightnessFilter.Q.value = 0.8;
-    this.#brightnessFilter.gain.value = 2; // always a touch brighter/present, not just under motion
+    this.#brightnessFilter.gain.value = 2; // a touch brighter/present at all times, not just under motion
 
     this.#bodyFilter = this.#ctx.createBiquadFilter();
     this.#bodyFilter.type = "lowpass";
     this.#bodyFilter.frequency.value = 6000;
     this.#bodyFilter.Q.value = 0.5;
 
-    // Gentle bus glue: keeps multiple detuned reeds + sub-octave + noise
-    // from clipping when several notes stack up, so MASTER_GAIN can push
-    // the overall level up without harsh distortion on chords.
+    // Gentle bus glue: keeps several open reeds (a full chord, plus each
+    // note's own sub-octave reed) from clipping, so MASTER_GAIN can push
+    // the overall level up without harsh distortion.
     this.#compressor = this.#ctx.createDynamicsCompressor();
     this.#compressor.threshold.value = -18;
     this.#compressor.knee.value = 8;
@@ -99,25 +226,11 @@ export class AccordionEngine {
     this.#masterGain = this.#ctx.createGain();
     this.#masterGain.gain.value = MASTER_GAIN;
 
-    this.#bellowsGain.connect(this.#brightnessFilter);
+    this.#airBus.connect(this.#brightnessFilter);
     this.#brightnessFilter.connect(this.#bodyFilter);
     this.#bodyFilter.connect(this.#compressor);
     this.#compressor.connect(this.#masterGain);
     this.#masterGain.connect(this.#ctx.destination);
-
-    this.#noiseGain = this.#ctx.createGain();
-    this.#noiseGain.gain.value = 0;
-    const noiseFilter = this.#ctx.createBiquadFilter();
-    noiseFilter.type = "bandpass";
-    noiseFilter.frequency.value = 4200;
-    noiseFilter.Q.value = 0.6;
-    const noise = this.#ctx.createBufferSource();
-    noise.buffer = this.#buildNoiseBuffer();
-    noise.loop = true;
-    noise.connect(noiseFilter);
-    noiseFilter.connect(this.#noiseGain);
-    this.#noiseGain.connect(this.#bellowsGain);
-    noise.start();
   }
 
   /** Resumes the AudioContext; must be called from a user gesture (keydown). */
@@ -126,121 +239,52 @@ export class AccordionEngine {
   }
 
   /**
-   * @param pressure 0..1 bellows pressure (see bellows.ts).
+   * Bellows state only ever changes loudness/expression here -- never
+   * pitch (Section 13). `pressure` and `direction` come from BellowsPressure
+   * in bellows.ts, which derives them from lid angular velocity.
+   * @param pressure 0..1 bellows pressure.
    * @param direction -1 (push) / 0 (rest) / 1 (pull) -- colours the tone subtly.
    */
   setBellows(pressure: number, direction: -1 | 0 | 1): void {
     this.#currentPressure = pressure;
     const now = this.#ctx.currentTime;
-    // A silent bellows should still let a freshly-struck key speak a touch
-    // (like a real reed getting a little residual air), rather than going
-    // fully mute -- but a *stationary* screen must never sustain a note.
-    const audibleGain = SILENT_BELLOWS_FLOOR + pressure * (1 - SILENT_BELLOWS_FLOOR);
-    this.#bellowsGain.gain.setTargetAtTime(pressure > 0.001 ? audibleGain : 0, now, BELLOWS_SMOOTH_TIME_S);
-    this.#noiseGain.gain.setTargetAtTime(pressure * NOISE_PEAK_GAIN, now, BELLOWS_SMOOTH_TIME_S);
+    // A silent, motionless bellows must mean silence, full stop -- there is
+    // no "idle hum" here, unlike a note freshly struck under real pressure.
+    const audibleGain = AIR_BUS_MIN_GAIN_WHEN_MOVING + pressure * (1 - AIR_BUS_MIN_GAIN_WHEN_MOVING);
+    this.#airBus.gain.setTargetAtTime(pressure > 0.001 ? audibleGain : 0, now, AIR_BUS_SMOOTH_TIME_S);
 
-    // Push brightens, pull darkens -- pushed out further than before so the
-    // push/pull colour difference is actually perceptible, not just felt.
+    // Push brightens, pull darkens -- a subtle timbral shift, never a pitch
+    // shift, so push/pull colour is perceptible without the note wandering.
     const brightnessTarget = 2 + direction * 6 * pressure;
     const bodyFreqTarget = 6000 + direction * 700 * pressure;
-    this.#brightnessFilter.gain.setTargetAtTime(brightnessTarget, now, BELLOWS_SMOOTH_TIME_S);
-    this.#bodyFilter.frequency.setTargetAtTime(bodyFreqTarget, now, BELLOWS_SMOOTH_TIME_S);
+    this.#brightnessFilter.gain.setTargetAtTime(brightnessTarget, now, AIR_BUS_SMOOTH_TIME_S);
+    this.#bodyFilter.frequency.setTargetAtTime(bodyFreqTarget, now, AIR_BUS_SMOOTH_TIME_S);
   }
 
+  /** Opens the valve for `id`/`frequency` (key down). Retriggers in place if the same key was still releasing. */
   noteOn(id: string, frequency: number): void {
-    const now = this.#ctx.currentTime;
-    const attackS = Math.max(NOTE_ATTACK_MIN_S, NOTE_ATTACK_MAX_S - this.#currentPressure * (NOTE_ATTACK_MAX_S - NOTE_ATTACK_MIN_S));
+    const baseAttackS = Math.max(NOTE_ATTACK_MIN_S, NOTE_ATTACK_MAX_S - this.#currentPressure * (NOTE_ATTACK_MAX_S - NOTE_ATTACK_MIN_S));
+    const attackS = baseAttackS * lowNoteAttackScale(frequency);
 
-    const releasing = this.#voices.get(id);
-    if (releasing) {
-      if (releasing.stopTimeout === null) return; // still fully held, ignore duplicate on
-      // The same key was released and pressed again before its old voice's
-      // cleanup timer fired -- retrigger it in place instead of silently
+    const existing = this.#valves.get(id);
+    if (existing) {
+      if (existing.isOpen) return; // key already held, ignore duplicate/auto-repeat note-on
+      // The same key was released and pressed again before its old valve's
+      // cleanup timer fired -- reopen it in place instead of silently
       // dropping the new note-on (this was the cause of keys "not sounding"
       // on quick repeat presses).
-      clearTimeout(releasing.stopTimeout);
-      releasing.stopTimeout = null;
-      releasing.gain.gain.cancelScheduledValues(now);
-      releasing.gain.gain.setValueAtTime(releasing.gain.gain.value, now);
-      releasing.gain.gain.linearRampToValueAtTime(1, now + attackS);
+      existing.reopen(attackS);
       return;
     }
 
-    const gain = this.#ctx.createGain();
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(1, now + attackS);
-    gain.connect(this.#bellowsGain);
-
-    const oscillators = DETUNE_CENTS.map((cents) => {
-      const osc = this.#ctx.createOscillator();
-      osc.setPeriodicWave(this.#reedWave);
-      osc.frequency.value = frequency;
-      osc.detune.value = cents;
-      osc.connect(gain);
-      osc.start(now);
-      return osc;
-    });
-
-    // A softer octave-down "bass reed" register, coupled through its own
-    // fixed-level gain into the same per-note envelope -- real accordions
-    // couple multiple reed ranks per key, and a lone unison rank is what
-    // reads as thin.
-    const subGain = this.#ctx.createGain();
-    subGain.gain.value = SUB_OCTAVE_GAIN;
-    subGain.connect(gain);
-    const subOsc = this.#ctx.createOscillator();
-    subOsc.setPeriodicWave(this.#subWave);
-    subOsc.frequency.value = frequency * Math.pow(2, SUB_OCTAVE_SEMITONES / 12);
-    subOsc.connect(subGain);
-    subOsc.start(now);
-    oscillators.push(subOsc);
-
-    this.#voices.set(id, { oscillators, helperNodes: [subGain], gain, stopTimeout: null });
+    const valve = new NoteValve(this.#ctx, this.#reedBank, this.#airBus, frequency, attackS);
+    this.#valves.set(id, valve);
   }
 
+  /** Closes the valve for `id` (key up); the reed fades out over its release tail rather than cutting instantly. */
   noteOff(id: string): void {
-    const voice = this.#voices.get(id);
-    if (!voice || voice.stopTimeout !== null) return; // already releasing
-
-    const now = this.#ctx.currentTime;
-    voice.gain.gain.cancelScheduledValues(now);
-    voice.gain.gain.setValueAtTime(voice.gain.gain.value, now);
-    voice.gain.gain.linearRampToValueAtTime(0, now + NOTE_RELEASE_S);
-
-    voice.stopTimeout = setTimeout(() => {
-      for (const osc of voice.oscillators) {
-        osc.stop();
-        osc.disconnect();
-      }
-      for (const node of voice.helperNodes) node.disconnect();
-      voice.gain.disconnect();
-      this.#voices.delete(id);
-    }, VOICE_CLEANUP_DELAY_S * 1000);
-  }
-
-  #buildNoiseBuffer(): AudioBuffer {
-    const durationS = 2;
-    const buffer = this.#ctx.createBuffer(1, this.#ctx.sampleRate * durationS, this.#ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-    return buffer;
-  }
-
-  /**
-   * Builds a sine-phase-harmonics PeriodicWave (reedy, not a pure buzz) with
-   * a manually controlled peak, instead of letting createPeriodicWave's own
-   * normalization pick an unpredictable scale. `sum(|amplitude|)` is a safe
-   * upper bound on the resulting waveform's peak, so scaling by it keeps the
-   * final peak at `targetPeak` regardless of how many harmonics are mixed in.
-   */
-  #buildWave(amplitudes: number[], targetPeak: number): PeriodicWave {
-    const sum = amplitudes.reduce((total, a) => total + a, 0);
-    const scale = targetPeak / sum;
-    const real = new Float32Array(amplitudes.length + 1);
-    const imag = new Float32Array(amplitudes.length + 1);
-    amplitudes.forEach((amplitude, index) => {
-      imag[index + 1] = amplitude * scale;
-    });
-    return this.#ctx.createPeriodicWave(real, imag, { disableNormalization: true });
+    const valve = this.#valves.get(id);
+    if (!valve || !valve.isOpen) return; // no such note, or already releasing
+    valve.close(() => this.#valves.delete(id));
   }
 }

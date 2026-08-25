@@ -1,5 +1,5 @@
 import { SensorClient } from "./sensor-client.ts";
-import { BellowsModel } from "./bellows.ts";
+import { BellowsPressure } from "./bellows.ts";
 import { AccordionEngine } from "./audio-engine.ts";
 import { KEY_TO_DEF, renderKeyboard } from "./keyboard.ts";
 import { AccordionVisuals } from "./visuals.ts";
@@ -14,7 +14,7 @@ const angleEl = document.querySelector<HTMLElement>("#debug-angle")!;
 const velocityEl = document.querySelector<HTMLElement>("#debug-velocity")!;
 
 const sensor = new SensorClient();
-const bellows = new BellowsModel();
+const bellows = new BellowsPressure();
 const engine = new AccordionEngine();
 const visuals = new AccordionVisuals(document);
 
