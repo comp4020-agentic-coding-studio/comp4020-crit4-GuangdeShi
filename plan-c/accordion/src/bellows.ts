@@ -14,9 +14,14 @@
 // back under the dead zone.
 
 const DEAD_ZONE_DEG_PER_S = 3;
-const SATURATE_DEG_PER_S = 55;
+// Lowered from 55: normal, non-frantic lid movement speed should be able to
+// reach full bellows pressure -- at 55 the instrument stayed timid/quiet
+// under everyday motion and only got loud during unrealistically fast flicks.
+const SATURATE_DEG_PER_S = 40;
 const ATTACK_TIME_CONSTANT_S = 0.05;
-const DECAY_TIME_CONSTANT_S = 0.35;
+// Slightly longer decay tail so a stopped bellows fades out more like a real
+// instrument's residual air than a quick digital cutoff.
+const DECAY_TIME_CONSTANT_S = 0.4;
 
 export type BellowsDirection = -1 | 0 | 1;
 

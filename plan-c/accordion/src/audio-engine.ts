@@ -1,15 +1,28 @@
 // Accordion-style Web Audio voice.
 //
 // Not a plain oscillator or organ pad: each note is a small bank of
-// slightly-detuned reed oscillators sharing a hand-built harmonic
-// spectrum (via createPeriodicWave), so two voices beat gently against
-// each other the way real accordion reeds (musette tuning) do. The
-// whole instrument runs through a shared "bellows" gain bus plus two
+// slightly-detuned reed oscillators sharing a hand-built harmonic spectrum
+// (via createPeriodicWave), so voices beat gently against each other the
+// way real accordion reeds (musette tuning) do, plus a softer sub-octave
+// "bass reed" register for body -- a real accordion sounds fuller than a
+// single reed rank, and a plain unison oscillator reads as thin/generic.
+// The whole instrument runs through a shared "bellows" gain bus, two
 // filters that brighten/darken with bellows pressure and push/pull
-// direction, standing in for reed-chamber body resonance.
+// direction (reed-chamber body resonance), and a gentle bus compressor +
+// makeup gain so it can be driven hot without harsh digital clipping.
 
-const HARMONIC_AMPLITUDES = [1, 0.55, 0.38, 0.22, 0.14, 0.08, 0.05];
+// Manually normalized (see #buildWave) rather than relying on
+// createPeriodicWave's own normalization, which would otherwise silently
+// pick whatever peak-scaling it wants and make the actual loudness hard to
+// reason about or tune.
+const REED_HARMONIC_AMPLITUDES = [1, 0.55, 0.38, 0.22, 0.14, 0.08, 0.05];
+const SUB_HARMONIC_AMPLITUDES = [1, 0.3, 0.1];
+const REED_PEAK = 0.9;
+const SUB_PEAK = 0.9;
+
 const DETUNE_CENTS = [-7, 0, 7];
+const SUB_OCTAVE_SEMITONES = -12;
+const SUB_OCTAVE_GAIN = 0.4;
 
 // Attack tightens as bellows pressure rises -- a hard, fast push/pull
 // makes a reed speak almost instantly, a gentle one takes a beat longer.
@@ -19,15 +32,24 @@ const NOTE_RELEASE_S = 0.12;
 const VOICE_CLEANUP_DELAY_S = NOTE_RELEASE_S + 0.1;
 
 const BELLOWS_SMOOTH_TIME_S = 0.03;
-const SILENT_BELLOWS_FLOOR = 0.04;
+// Held-at-rest notes should still be faintly present (a real reed gets a
+// little residual air), but clearly quieter than anything actually being
+// bellowed -- this is a balance point, not "as quiet as possible".
+const SILENT_BELLOWS_FLOOR = 0.07;
 
 // A thin layer of filtered air/reed noise, audible only while the bellows
 // actually has pressure -- otherwise sustained notes read as too "clean"
 // and electronic.
-const NOISE_PEAK_GAIN = 0.025;
+const NOISE_PEAK_GAIN = 0.04;
+
+// Bus makeup gain applied after the compressor -- the compressor keeps
+// summed voices + noise from clipping, this brings the overall level back
+// up to something that actually reads as "present" rather than "thin".
+const MASTER_GAIN = 1.7;
 
 interface Voice {
   oscillators: OscillatorNode[];
+  helperNodes: AudioNode[];
   gain: GainNode;
   stopTimeout: ReturnType<typeof setTimeout> | null;
 }
@@ -35,16 +57,20 @@ interface Voice {
 export class AccordionEngine {
   #ctx: AudioContext;
   #reedWave: PeriodicWave;
+  #subWave: PeriodicWave;
   #bellowsGain: GainNode;
   #brightnessFilter: BiquadFilterNode;
   #bodyFilter: BiquadFilterNode;
+  #compressor: DynamicsCompressorNode;
+  #masterGain: GainNode;
   #noiseGain: GainNode;
   #voices = new Map<string, Voice>();
   #currentPressure = 0;
 
   constructor() {
     this.#ctx = new AudioContext();
-    this.#reedWave = this.#buildReedWave();
+    this.#reedWave = this.#buildWave(REED_HARMONIC_AMPLITUDES, REED_PEAK);
+    this.#subWave = this.#buildWave(SUB_HARMONIC_AMPLITUDES, SUB_PEAK);
 
     this.#bellowsGain = this.#ctx.createGain();
     this.#bellowsGain.gain.value = 0;
@@ -53,16 +79,31 @@ export class AccordionEngine {
     this.#brightnessFilter.type = "peaking";
     this.#brightnessFilter.frequency.value = 1400;
     this.#brightnessFilter.Q.value = 0.8;
-    this.#brightnessFilter.gain.value = 0;
+    this.#brightnessFilter.gain.value = 2; // always a touch brighter/present, not just under motion
 
     this.#bodyFilter = this.#ctx.createBiquadFilter();
     this.#bodyFilter.type = "lowpass";
-    this.#bodyFilter.frequency.value = 5200;
+    this.#bodyFilter.frequency.value = 6000;
     this.#bodyFilter.Q.value = 0.5;
+
+    // Gentle bus glue: keeps multiple detuned reeds + sub-octave + noise
+    // from clipping when several notes stack up, so MASTER_GAIN can push
+    // the overall level up without harsh distortion on chords.
+    this.#compressor = this.#ctx.createDynamicsCompressor();
+    this.#compressor.threshold.value = -18;
+    this.#compressor.knee.value = 8;
+    this.#compressor.ratio.value = 3.5;
+    this.#compressor.attack.value = 0.003;
+    this.#compressor.release.value = 0.2;
+
+    this.#masterGain = this.#ctx.createGain();
+    this.#masterGain.gain.value = MASTER_GAIN;
 
     this.#bellowsGain.connect(this.#brightnessFilter);
     this.#brightnessFilter.connect(this.#bodyFilter);
-    this.#bodyFilter.connect(this.#ctx.destination);
+    this.#bodyFilter.connect(this.#compressor);
+    this.#compressor.connect(this.#masterGain);
+    this.#masterGain.connect(this.#ctx.destination);
 
     this.#noiseGain = this.#ctx.createGain();
     this.#noiseGain.gain.value = 0;
@@ -98,10 +139,10 @@ export class AccordionEngine {
     this.#bellowsGain.gain.setTargetAtTime(pressure > 0.001 ? audibleGain : 0, now, BELLOWS_SMOOTH_TIME_S);
     this.#noiseGain.gain.setTargetAtTime(pressure * NOISE_PEAK_GAIN, now, BELLOWS_SMOOTH_TIME_S);
 
-    // Push brightens slightly, pull darkens slightly -- a small, physical-
-    // feeling asymmetry rather than a dramatic effect.
-    const brightnessTarget = direction * 3 * pressure;
-    const bodyFreqTarget = 5200 + direction * 400 * pressure;
+    // Push brightens, pull darkens -- pushed out further than before so the
+    // push/pull colour difference is actually perceptible, not just felt.
+    const brightnessTarget = 2 + direction * 6 * pressure;
+    const bodyFreqTarget = 6000 + direction * 700 * pressure;
     this.#brightnessFilter.gain.setTargetAtTime(brightnessTarget, now, BELLOWS_SMOOTH_TIME_S);
     this.#bodyFilter.frequency.setTargetAtTime(bodyFreqTarget, now, BELLOWS_SMOOTH_TIME_S);
   }
@@ -140,7 +181,21 @@ export class AccordionEngine {
       return osc;
     });
 
-    this.#voices.set(id, { oscillators, gain, stopTimeout: null });
+    // A softer octave-down "bass reed" register, coupled through its own
+    // fixed-level gain into the same per-note envelope -- real accordions
+    // couple multiple reed ranks per key, and a lone unison rank is what
+    // reads as thin.
+    const subGain = this.#ctx.createGain();
+    subGain.gain.value = SUB_OCTAVE_GAIN;
+    subGain.connect(gain);
+    const subOsc = this.#ctx.createOscillator();
+    subOsc.setPeriodicWave(this.#subWave);
+    subOsc.frequency.value = frequency * Math.pow(2, SUB_OCTAVE_SEMITONES / 12);
+    subOsc.connect(subGain);
+    subOsc.start(now);
+    oscillators.push(subOsc);
+
+    this.#voices.set(id, { oscillators, helperNodes: [subGain], gain, stopTimeout: null });
   }
 
   noteOff(id: string): void {
@@ -157,6 +212,7 @@ export class AccordionEngine {
         osc.stop();
         osc.disconnect();
       }
+      for (const node of voice.helperNodes) node.disconnect();
       voice.gain.disconnect();
       this.#voices.delete(id);
     }, VOICE_CLEANUP_DELAY_S * 1000);
@@ -170,12 +226,21 @@ export class AccordionEngine {
     return buffer;
   }
 
-  #buildReedWave(): PeriodicWave {
-    const real = new Float32Array(HARMONIC_AMPLITUDES.length + 1);
-    const imag = new Float32Array(HARMONIC_AMPLITUDES.length + 1);
-    HARMONIC_AMPLITUDES.forEach((amplitude, index) => {
-      imag[index + 1] = amplitude; // sine-phase harmonics: reedy, not a pure buzz
+  /**
+   * Builds a sine-phase-harmonics PeriodicWave (reedy, not a pure buzz) with
+   * a manually controlled peak, instead of letting createPeriodicWave's own
+   * normalization pick an unpredictable scale. `sum(|amplitude|)` is a safe
+   * upper bound on the resulting waveform's peak, so scaling by it keeps the
+   * final peak at `targetPeak` regardless of how many harmonics are mixed in.
+   */
+  #buildWave(amplitudes: number[], targetPeak: number): PeriodicWave {
+    const sum = amplitudes.reduce((total, a) => total + a, 0);
+    const scale = targetPeak / sum;
+    const real = new Float32Array(amplitudes.length + 1);
+    const imag = new Float32Array(amplitudes.length + 1);
+    amplitudes.forEach((amplitude, index) => {
+      imag[index + 1] = amplitude * scale;
     });
-    return this.#ctx.createPeriodicWave(real, imag, { disableNormalization: false });
+    return this.#ctx.createPeriodicWave(real, imag, { disableNormalization: true });
   }
 }
