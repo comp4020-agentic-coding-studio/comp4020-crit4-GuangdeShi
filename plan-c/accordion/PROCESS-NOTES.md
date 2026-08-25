@@ -136,3 +136,42 @@ pressure feel like air rather than a volume knob, does reversing bellows
 direction feel like a real hiccup rather than a glitch) is still owed and
 can only be done by ear against the running app -- see the commit history
 for what shipped, and test it locally with `pnpm dev`.
+
+## Round 3: bellows dynamic range was too subtle, plus a real clipping bug
+
+The interaction model from Round 2 (keyboard = pitch, bellows = air) was
+confirmed correct, but manual listening found the audible gap between slow
+and fast lid movement too small to reliably tell apart by ear. This round
+kept the model exactly as-is and only widened the response:
+
+- **`src/bellows.ts`**: the velocity→pressure ramp changed from a straight
+  linear ramp to a concave curve (`pow(ratio, 0.75)`, saturation speed raised
+  40→50 deg/s) so medium (~20 deg/s) and fast (~35 deg/s) sustained motion
+  land at clearly separated steady-state pressures instead of both reading as
+  "loud" -- see the new spread-pressure test in `bellows.test.ts` for the
+  numeric contract this locks in.
+- **`src/audio-engine.ts`**: `AIR_BUS_MIN_GAIN_WHEN_MOVING` lowered
+  (0.045→0.02) so slow motion reads as genuinely soft, not "almost medium";
+  the bus compressor's threshold raised and ratio eased (it was quietly
+  flattening the widened dynamic swing back out); bellows pressure now also
+  drives a direction-symmetric brightness/body-filter shift (louder bellows
+  = brighter/richer tone, not just louder, on top of the existing smaller
+  push/pull directional tilt).
+- **A real clipping bug, found by direct measurement, not just listening.**
+  Tapping the engine's actual output with a Playwright script (monkey-patched
+  `AudioContext.prototype.createDynamicsCompressor`/`createWaveShaper` to
+  grab an internal node, connected an `AnalyserNode` to it) showed a single
+  note at medium bellows pressure already peaked over unity, and a 4-note
+  chord at full pressure peaked at **6.07x** -- three detuned oscillators
+  plus a sub-reed, times a chord, summing past what the existing gentle
+  bus compressor could catch (its ballistics can't react to sample-level
+  transient peaks). Fixed with a final deterministic soft-clip
+  `WaveShaperNode` after the existing limiter: identity below 0.85, smooth
+  `tanh` saturation above, so ordinary playing measures byte-for-byte
+  identical to before the fix and only genuine transient peaks are caught.
+  Re-measured after the fix: same worst-case chord now peaks at 0.97x, no
+  clipping, quiet single-note playing unchanged.
+
+Checkpoint commit: `Plan C: checkpoint expressive MacBook accordion
+prototype`. See [`TOMORROW.md`](TOMORROW.md) for what's still owed (a real
+by-ear A/B listening pass against the running app) and where to pick back up.
