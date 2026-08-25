@@ -7,11 +7,57 @@
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
-    <main>
-      <h1>MacBook Accordion</h1>
-      <p id="sensor-status" data-state="connecting">Waiting for MacBook sensor…</p>
-      <p>ANGLE <span id="debug-angle">--</span></p>
-      <p>VELOCITY <span id="debug-velocity">--</span></p>
+    <main class="stage">
+      <header class="masthead">
+        <h1>MacBook Accordion</h1>
+        <p class="tagline">Keys choose the note. The screen breathes.</p>
+      </header>
+
+      <div class="accordion" id="accordion" data-direction="rest">
+        <section class="bass-side" aria-hidden="true">
+          <div class="grille"></div>
+          <div class="strap"></div>
+        </section>
+
+        <section class="bellows" id="bellows" aria-hidden="true">
+          <div class="fold"></div>
+          <div class="fold"></div>
+          <div class="fold"></div>
+          <div class="fold"></div>
+          <div class="fold"></div>
+          <div class="fold"></div>
+          <div class="fold"></div>
+          <div class="fold"></div>
+        </section>
+
+        <section class="treble-side">
+          <div class="keyboard" id="keyboard">
+            <div class="key-row black-row">
+              <button class="key black" data-key="w" style="--offset: 9%">W</button>
+              <button class="key black" data-key="e" style="--offset: 21.5%">E</button>
+              <button class="key black" data-key="t" style="--offset: 46.5%">T</button>
+              <button class="key black" data-key="y" style="--offset: 59%">Y</button>
+              <button class="key black" data-key="u" style="--offset: 71.5%">U</button>
+            </div>
+            <div class="key-row white-row">
+              <button class="key white" data-key="a">A</button>
+              <button class="key white" data-key="s">S</button>
+              <button class="key white" data-key="d">D</button>
+              <button class="key white" data-key="f">F</button>
+              <button class="key white" data-key="g">G</button>
+              <button class="key white" data-key="h">H</button>
+              <button class="key white" data-key="j">J</button>
+              <button class="key white" data-key="k">K</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <p id="sensor-status" class="sensor-status" data-state="connecting">Waiting for MacBook sensor…</p>
+      <div class="telemetry" id="telemetry">
+        <span>∠<span id="debug-angle">--</span></span>
+        <span>ω<span id="debug-velocity">--</span></span>
+      </div>
     </main>
     <script type="module" src="./src/main.ts"></script>
   </body>

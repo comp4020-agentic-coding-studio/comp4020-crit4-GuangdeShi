@@ -1,24 +1,284 @@
-/* Phase 1 checkpoint styling only -- replaced by the full accordion visual
-   design in a later commit. */
-body {
-  font-family: system-ui, sans-serif;
-  background: #111;
-  color: #eee;
-  display: grid;
-  place-items: center;
-  min-height: 100vh;
-  margin: 0;
+/* MacBook Accordion -- visual design.
+   A vintage, hand-crafted-feeling accordion: pearl-burgundy body panels,
+   brass trim, ivory/ebony keys, and a bellows whose real width and
+   "breathing" glow track the physical lid's live angle and velocity.
+   The bellows visual is a *readout* of the sensor, not an input surface. */
+
+@font-face {
+  font-family: "Georgia-fallback";
+  src: local("Georgia");
 }
 
-main {
+:root {
+  --stage-bg-0: #14100d;
+  --stage-bg-1: #241a15;
+  --body-wine-0: #5a1420;
+  --body-wine-1: #3a0d16;
+  --body-wine-2: #7a2230;
+  --brass-0: #d9b56a;
+  --brass-1: #8a6a2e;
+  --ivory-0: #f6efdd;
+  --ivory-1: #ddd0ab;
+  --ebony-0: #2a2622;
+  --ebony-1: #100e0c;
+  --ink: #f1e9d8;
+  --ink-dim: #b8a98e;
+  --ok: #8fd19e;
+  --warn: #d98f7c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 3rem clamp(0.5rem, 3vw, 1.5rem);
+  font-family: Georgia, "Georgia-fallback", "Iowan Old Style", serif;
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse 60% 45% at 50% 38%, rgba(217, 181, 106, 0.12), transparent 70%),
+    radial-gradient(ellipse 120% 80% at 50% 0%, var(--stage-bg-1), var(--stage-bg-0) 70%);
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+  width: 100%;
+  max-width: 720px;
+}
+
+.masthead {
   text-align: center;
 }
 
-#sensor-status[data-state="connected"] {
-  color: #7cd992;
+.masthead h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
 }
 
-#sensor-status[data-state="disconnected"],
-#sensor-status[data-state="connecting"] {
-  color: #d97c7c;
+.tagline {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--ink-dim);
+  letter-spacing: 0.02em;
 }
+
+/* ---------- accordion body ---------- */
+
+.accordion {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0;
+  max-width: 100%;
+  overflow-x: auto; /* safety net; the clamp()/min() sizing below shouldn't need it */
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.55));
+}
+
+.bass-side,
+.treble-side {
+  background:
+    radial-gradient(120% 140% at 30% 10%, var(--body-wine-2), var(--body-wine-0) 55%, var(--body-wine-1) 100%);
+  border: 2px solid var(--brass-1);
+  box-shadow:
+    inset 0 0 0 3px rgba(217, 181, 106, 0.25),
+    inset 0 2px 6px rgba(255, 255, 255, 0.08),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.35);
+}
+
+.bass-side {
+  width: clamp(48px, 13vw, 108px);
+  flex-shrink: 0;
+  border-radius: 14px 6px 6px 14px;
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.bass-side .grille {
+  width: clamp(36px, 10vw, 68px);
+  height: clamp(36px, 10vw, 68px);
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(circle, rgba(217, 181, 106, 0.5) 0 1.5px, transparent 1.5px 7px),
+    radial-gradient(circle, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.2) 70%);
+  border: 2px solid var(--brass-0);
+}
+
+.bass-side .strap {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  width: 22px;
+  height: 46px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, var(--ebony-1), var(--ebony-0));
+  border: 1px solid var(--brass-1);
+  border-radius: 3px;
+}
+
+.treble-side {
+  border-radius: 6px 14px 14px 6px;
+  padding: clamp(8px, 3vw, 14px) clamp(6px, 2.5vw, 12px);
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* ---------- bellows ---------- */
+
+.bellows {
+  --bellows-extent: 90px;
+  --bellows-pressure: 0;
+  /* min()'d against a viewport-relative cap so a JS-set extent can never
+     force the instrument wider than a small screen, no breakpoint needed. */
+  width: min(var(--bellows-extent), 14vw);
+  min-width: min(46px, 8vw);
+  max-width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  align-self: stretch;
+  transition: width 90ms linear;
+}
+
+.bellows .fold {
+  flex: 1;
+  margin: 6px 0;
+  border-top: 2px solid var(--brass-1);
+  border-bottom: 2px solid var(--brass-1);
+  background: linear-gradient(
+    100deg,
+    #b5883f 0%,
+    #7a5726 12%,
+    #4a3316 24%,
+    #7a5726 36%,
+    #b5883f 48%
+  );
+  background-size: 220% 100%;
+  clip-path: polygon(15% 0%, 100% 0%, 85% 100%, 0% 100%);
+  box-shadow: 0 0 calc(4px + 10px * var(--bellows-pressure)) rgba(255, 208, 120, calc(0.15 + 0.45 * var(--bellows-pressure)));
+}
+
+.accordion[data-direction="push"] .bellows .fold {
+  filter: brightness(calc(1 + 0.12 * var(--bellows-pressure)));
+}
+
+.accordion[data-direction="pull"] .bellows .fold {
+  filter: brightness(calc(1 - 0.08 * var(--bellows-pressure))) saturate(calc(1 + 0.2 * var(--bellows-pressure)));
+}
+
+/* ---------- keyboard ---------- */
+
+.keyboard {
+  position: relative;
+  width: clamp(150px, 48vw, 300px);
+}
+
+.key-row {
+  display: flex;
+  width: 100%;
+}
+
+.white-row {
+  position: relative;
+  gap: 3px;
+}
+
+.black-row {
+  position: relative;
+  height: 0;
+}
+
+.key {
+  font-family: inherit;
+  cursor: pointer;
+  user-select: none;
+  border: none;
+  border-radius: 0 0 5px 5px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 6px;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  transition: transform 60ms ease, box-shadow 60ms ease, background 60ms ease;
+}
+
+.key.white {
+  flex: 1;
+  height: clamp(56px, 18vw, 92px);
+  color: #6b5a3a;
+  background: linear-gradient(180deg, var(--ivory-0), var(--ivory-1));
+  border: 1px solid #a8996f;
+  box-shadow: 0 4px 0 #a8996f, 0 6px 8px rgba(0, 0, 0, 0.35);
+}
+
+.key.white.active,
+.key.white:active {
+  transform: translateY(3px);
+  color: #7a4a12;
+  box-shadow: 0 1px 0 #a8996f, 0 0 0 2px var(--brass-0), 0 0 14px 2px rgba(233, 178, 82, 0.7);
+  background: linear-gradient(180deg, #f3d9a0, #e9c67a);
+}
+
+.key.black {
+  position: absolute;
+  left: var(--offset);
+  width: 7%;
+  height: clamp(36px, 11vw, 58px);
+  color: var(--brass-0);
+  background: linear-gradient(180deg, var(--ebony-0), var(--ebony-1));
+  border: 1px solid #000;
+  box-shadow: 0 4px 0 #000, 0 6px 10px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+  font-size: 0.6rem;
+}
+
+.key.black.active,
+.key.black:active {
+  transform: translateY(3px);
+  color: #2a1c04;
+  box-shadow: 0 1px 0 #000, 0 0 0 2px var(--brass-0), 0 0 14px 3px rgba(233, 178, 82, 0.85);
+  background: linear-gradient(180deg, #e9c67a, #c9a227);
+}
+
+/* ---------- status + telemetry ---------- */
+
+.sensor-status {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+}
+
+.sensor-status[data-state="connected"] {
+  color: var(--ok);
+}
+
+.sensor-status[data-state="disconnected"],
+.sensor-status[data-state="connecting"] {
+  color: var(--warn);
+}
+
+.telemetry {
+  display: flex;
+  gap: 1.2rem;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.68rem;
+  color: rgba(241, 233, 216, 0.35);
+  letter-spacing: 0.02em;
+}
+
+/* No fixed-breakpoint overrides needed: bass-side, bellows, keyboard, and
+   key heights above all use clamp()/min() against vw units, so the whole
+   instrument scales fluidly down to phone widths. */
