@@ -48,7 +48,9 @@ const SUB_OCTAVE_GAIN = 0.4;
 
 // Attack tightens as bellows pressure rises -- a hard, fast bellows push
 // makes a reed speak almost instantly, a gentle one takes a beat longer.
-const NOTE_ATTACK_MAX_S = 0.09;
+// Widened from an earlier 0.09 max so a soft attack is clearly gentler, not
+// just barely slower than a fast one.
+const NOTE_ATTACK_MAX_S = 0.11;
 const NOTE_ATTACK_MIN_S = 0.015;
 const NOTE_RELEASE_S = 0.12;
 const VOICE_CLEANUP_DELAY_S = NOTE_RELEASE_S + 0.1;
@@ -63,17 +65,67 @@ const AIR_BUS_SMOOTH_TIME_S = 0.03;
 // A held note should still speak *faintly* the instant bellows pressure
 // crosses the dead zone (like a real reed catching residual air), but a
 // motionless bellows must stay silent -- see the pressure>0 gate below.
-// Pulled down from an earlier 0.07: a real accordion's pp is much quieter
-// relative to its ff than that, and the wider that gap, the more a slow
-// vs. fast bellows pump actually reads as a volume *swell* rather than an
-// on/off switch.
-const AIR_BUS_MIN_GAIN_WHEN_MOVING = 0.045;
+// Pulled down further from an earlier 0.045: paired with the reshaped
+// velocity->pressure curve in bellows.ts, this is what actually makes slow
+// lid motion read as "soft" rather than "almost the same as medium" --
+// the whole point of this pass is a wide, obvious pp-to-ff swing, and a
+// floor this low is most of how that's achieved.
+const AIR_BUS_MIN_GAIN_WHEN_MOVING = 0.02;
+
+// Pressure-driven brightness: independent of push/pull direction, a harder
+// bellows push should sound brighter/richer, not just louder -- real
+// accordion dynamics aren't "same tone, more volume." These stack with the
+// smaller direction-coloured shift below.
+const PRESSURE_BRIGHTNESS_GAIN_DB_RANGE = 9;
+const PRESSURE_BODY_FREQUENCY_HZ_RANGE = 3200;
+const BODY_FREQUENCY_AT_REST_HZ = 4800;
+// Direction still colours the tone slightly (push brighter, pull darker)
+// on top of the pressure-driven brightening above, kept smaller so it reads
+// as character, not the main effect.
+const DIRECTIONAL_BRIGHTNESS_GAIN_DB_RANGE = 4;
+const DIRECTIONAL_BODY_FREQUENCY_HZ_RANGE = 500;
 
 // Bus makeup gain applied after the compressor -- the compressor keeps
 // several open reeds (main + sub-octave, possibly a full chord) from
 // clipping, this brings the overall level back up to something that
 // actually reads as "present" rather than thin.
-const MASTER_GAIN = 1.9;
+const MASTER_GAIN = 1.6;
+
+// Final safety stage, placed after MASTER_GAIN, right before the
+// destination. The bus compressor above is deliberately gentle (ratio 2)
+// so the widened pp-ff bellows dynamic survives, and does help with
+// sustained loudness -- but three detuned oscillators plus a sub-reed
+// summing per note, times a multi-note chord, can align to sample-level
+// peaks well over unity even at an ordinary single note's medium
+// pressure (measured up to ~1.4x with a 6-note chord at full pressure).
+// A DynamicsCompressorNode's ballistics can't react to peaks that fast,
+// so a deterministic WaveShaperNode soft-clip follows it as the actual
+// guarantee against overs: identity (no change at all) below
+// SOFT_CLIP_KNEE, smoothly saturating toward ~1 above it, so ordinary
+// playing is untouched and only genuine sample peaks get caught --
+// without the harsh, brittle-sounding corner a hard clip would add.
+const LIMITER_THRESHOLD_DB = -1;
+const LIMITER_RATIO = 20;
+const SOFT_CLIP_KNEE = 0.85;
+
+/**
+ * Builds a soft-clip curve for the final safety WaveShaper: the identity
+ * function below SOFT_CLIP_KNEE, smoothly saturating toward (but never
+ * reaching) 1 above it, mirrored for negative values. Anything the
+ * WaveShaper receives beyond +-1 clamps to this curve's edge value, so the
+ * output magnitude is bounded regardless of how far a transient overshoots.
+ */
+function buildSoftClipCurve(): Float32Array {
+  const SAMPLES = 1024;
+  const curve = new Float32Array(SAMPLES);
+  for (let i = 0; i < SAMPLES; i++) {
+    const x = (i / (SAMPLES - 1)) * 2 - 1;
+    const ax = Math.abs(x);
+    const y = ax <= SOFT_CLIP_KNEE ? ax : SOFT_CLIP_KNEE + (1 - SOFT_CLIP_KNEE) * Math.tanh((ax - SOFT_CLIP_KNEE) / (1 - SOFT_CLIP_KNEE));
+    curve[i] = Math.sign(x) * y;
+  }
+  return curve;
+}
 
 /** How much slower (as a multiplier >= 1) a reed at this pitch should be to speak, per Section 14. */
 function lowNoteAttackScale(frequencyHz: number): number {
@@ -200,6 +252,8 @@ export class AccordionEngine {
   #bodyFilter: BiquadFilterNode;
   #compressor: DynamicsCompressorNode;
   #masterGain: GainNode;
+  #limiter: DynamicsCompressorNode;
+  #softClip: WaveShaperNode;
   #valves = new Map<string, NoteValve>();
   #currentPressure = 0;
 
@@ -214,34 +268,49 @@ export class AccordionEngine {
     this.#brightnessFilter.type = "peaking";
     this.#brightnessFilter.frequency.value = 1400;
     this.#brightnessFilter.Q.value = 0.8;
-    this.#brightnessFilter.gain.value = 2; // a touch brighter/present at all times, not just under motion
+    this.#brightnessFilter.gain.value = 0; // resting/soft baseline is deliberately duller -- see setBellows
 
     this.#bodyFilter = this.#ctx.createBiquadFilter();
     this.#bodyFilter.type = "lowpass";
-    this.#bodyFilter.frequency.value = 6000;
+    this.#bodyFilter.frequency.value = BODY_FREQUENCY_AT_REST_HZ;
     this.#bodyFilter.Q.value = 0.5;
 
     // Gentle bus glue: keeps several open reeds (a full chord, plus each
     // note's own sub-octave reed) from clipping, so MASTER_GAIN can push
     // the overall level up without harsh distortion. Threshold raised and
-    // ratio eased back from an earlier, squashier setting -- a real
-    // accordion's forte still has real dynamic bite to it; over-compressing
-    // the bus flattened a hard bellows push into barely more than a soft one.
+    // ratio eased back further from an earlier, squashier setting -- the
+    // whole point of this pass is a wide, obvious bellows dynamic, and a
+    // compressor that engages too early flattens exactly that difference
+    // back out. This only meaningfully engages on genuinely loud moments
+    // (a full-pressure chord), not on ordinary single-note dynamics.
     this.#compressor = this.#ctx.createDynamicsCompressor();
-    this.#compressor.threshold.value = -14;
-    this.#compressor.knee.value = 6;
-    this.#compressor.ratio.value = 2.8;
+    this.#compressor.threshold.value = -9;
+    this.#compressor.knee.value = 8;
+    this.#compressor.ratio.value = 2;
     this.#compressor.attack.value = 0.003;
     this.#compressor.release.value = 0.2;
 
     this.#masterGain = this.#ctx.createGain();
     this.#masterGain.gain.value = MASTER_GAIN;
 
+    this.#limiter = this.#ctx.createDynamicsCompressor();
+    this.#limiter.threshold.value = LIMITER_THRESHOLD_DB;
+    this.#limiter.knee.value = 0;
+    this.#limiter.ratio.value = LIMITER_RATIO;
+    this.#limiter.attack.value = 0.001;
+    this.#limiter.release.value = 0.1;
+
+    this.#softClip = this.#ctx.createWaveShaper();
+    this.#softClip.curve = buildSoftClipCurve();
+    this.#softClip.oversample = "4x"; // reduces aliasing from the nonlinearity into harsh digital buzzing
+
     this.#airBus.connect(this.#brightnessFilter);
     this.#brightnessFilter.connect(this.#bodyFilter);
     this.#bodyFilter.connect(this.#compressor);
     this.#compressor.connect(this.#masterGain);
-    this.#masterGain.connect(this.#ctx.destination);
+    this.#masterGain.connect(this.#limiter);
+    this.#limiter.connect(this.#softClip);
+    this.#softClip.connect(this.#ctx.destination);
   }
 
   /** Resumes the AudioContext; must be called from a user gesture (keydown). */
@@ -264,10 +333,15 @@ export class AccordionEngine {
     const audibleGain = AIR_BUS_MIN_GAIN_WHEN_MOVING + pressure * (1 - AIR_BUS_MIN_GAIN_WHEN_MOVING);
     this.#airBus.gain.setTargetAtTime(pressure > 0.001 ? audibleGain : 0, now, AIR_BUS_SMOOTH_TIME_S);
 
-    // Push brightens, pull darkens -- a subtle timbral shift, never a pitch
-    // shift, so push/pull colour is perceptible without the note wandering.
-    const brightnessTarget = 2 + direction * 6 * pressure;
-    const bodyFreqTarget = 6000 + direction * 700 * pressure;
+    // Timbre changes with bellows pressure, not just loudness -- soft
+    // bellows should sound darker/smoother, hard bellows brighter/more
+    // reedy, the same way a real accordion's forte isn't just "the same
+    // tone turned up." This is the main, direction-symmetric driver; push
+    // vs. pull then adds a smaller directional tilt on top, so the two
+    // effects are perceptibly different in scale, not just in sign.
+    const brightnessTarget = pressure * PRESSURE_BRIGHTNESS_GAIN_DB_RANGE + direction * DIRECTIONAL_BRIGHTNESS_GAIN_DB_RANGE * pressure;
+    const bodyFreqTarget =
+      BODY_FREQUENCY_AT_REST_HZ + pressure * PRESSURE_BODY_FREQUENCY_HZ_RANGE + direction * DIRECTIONAL_BODY_FREQUENCY_HZ_RANGE * pressure;
     this.#brightnessFilter.gain.setTargetAtTime(brightnessTarget, now, AIR_BUS_SMOOTH_TIME_S);
     this.#bodyFilter.frequency.setTargetAtTime(bodyFreqTarget, now, AIR_BUS_SMOOTH_TIME_S);
   }

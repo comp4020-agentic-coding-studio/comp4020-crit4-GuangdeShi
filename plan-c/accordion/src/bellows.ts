@@ -11,8 +11,10 @@
 // motionless bellows on a real instrument.
 //
 // Below the dead zone, pressure targets 0 (screen essentially still).
-// Between the dead zone and the saturation point, pressure ramps linearly.
-// Above saturation, pressure is clamped at 1 -- extra speed doesn't make it
+// Between the dead zone and the saturation point, pressure ramps along a
+// concave curve (velocity ratio raised to PRESSURE_CURVE_EXPONENT < 1) --
+// see the note below on why a flat linear ramp wasn't cutting it. Above
+// saturation, pressure is clamped at 1 -- extra speed doesn't make it
 // louder still.
 //
 // The instantaneous target is then smoothed with an asymmetric time
@@ -25,16 +27,33 @@
 // a brief, shallow pressure dip: a real accordion has a small articulation
 // interruption at the moment the bellows changes direction, since airflow
 // through the reed briefly stalls while the mechanism reverses.
-
+//
+// Why a plain linear ramp read as "too subtle": a straight line from the
+// dead zone to the saturation speed spends most of its range in the middle
+// -- moderate, everyday lid motion (roughly 15-25 deg/s) already lands
+// around mid-pressure, leaving only a narrow band above it for "fast" to
+// separate itself from "medium" before saturating. Raising the normalised
+// velocity ratio to an exponent < 1 pulls the low end up (so even a slow,
+// deliberate movement is clearly audible instead of buried near zero) while
+// leaving the curve close to linear through the middle-to-top of the range,
+// so medium and fast motion still land at clearly different pressures
+// instead of both reading as "loud."
 const DEAD_ZONE_DEG_PER_S = 3;
-// Normal, non-frantic lid movement speed should be able to reach full
-// bellows pressure -- much higher and the instrument stays timid/quiet
-// under everyday motion and only gets loud during unrealistically fast flicks.
-const SATURATE_DEG_PER_S = 40;
+// Raised from an earlier 40: with the curve below, 40 let quite modest
+// motion saturate, leaving no room above "medium" for "fast" to separate
+// into. 50 keeps a comfortable, safe lid gesture from maxing out early.
+const SATURATE_DEG_PER_S = 50;
+// Chosen so the practical playing range (roughly 5-35 deg/s) spreads across
+// p...f instead of clustering near either end -- see PRESSURE_CURVE_EXPONENT
+// values worked through in bellows.test.ts's "spreads across the practical
+// playing range" case.
+const PRESSURE_CURVE_EXPONENT = 0.75;
 const ATTACK_TIME_CONSTANT_S = 0.05;
 // Decay tail so a stopped bellows fades out more like a real instrument's
-// residual air than a quick digital cutoff.
-const DECAY_TIME_CONSTANT_S = 0.4;
+// residual air than a quick digital cutoff -- tightened from an earlier 0.4s
+// so a stopped gesture reads as "falls away within a short musical moment,"
+// not a multi-second hang that blurs into the next gesture.
+const DECAY_TIME_CONSTANT_S = 0.3;
 
 // Direction-reversal articulation: a brief, shallow dip in effective
 // pressure, not a full mute -- real bellows reversal is a small hiccup, not
@@ -64,10 +83,11 @@ export class BellowsPressure {
   /** @param velocity degrees/second, signed. @param nowMs performance.now()-style timestamp, ms. */
   update(velocity: number, nowMs: number): BellowsState {
     const absVelocity = Math.abs(velocity);
-    const target =
+    const linearRatio =
       absVelocity < DEAD_ZONE_DEG_PER_S
         ? 0
         : clamp01((absVelocity - DEAD_ZONE_DEG_PER_S) / (SATURATE_DEG_PER_S - DEAD_ZONE_DEG_PER_S));
+    const target = linearRatio === 0 ? 0 : Math.pow(linearRatio, PRESSURE_CURVE_EXPONENT);
 
     const dtSeconds = this.#lastUpdateMs === null ? 0 : Math.max(0, (nowMs - this.#lastUpdateMs) / 1000);
     this.#lastUpdateMs = nowMs;

@@ -73,6 +73,40 @@ describe("BellowsPressure", () => {
     expect(last.direction).toBe(0); // fully at rest now
   });
 
+  it("spreads slow/medium/fast sustained movement across clearly different pressures (not clustered near either end)", () => {
+    // Steady-state pressure at each sustained velocity -- enough iterations
+    // for the attack smoothing to fully settle.
+    function steadyState(velocityDegPerS: number): number {
+      const bellows = new BellowsPressure();
+      let now = 0;
+      let pressure = 0;
+      for (let i = 0; i < 200; i++) {
+        now += 16;
+        pressure = bellows.update(velocityDegPerS, now).pressure;
+      }
+      return pressure;
+    }
+
+    const slow = steadyState(5); // deliberate, slow movement -- should read as soft, not silent
+    const medium = steadyState(20); // comfortable everyday movement -- should read as a normal mid-volume
+    const fast = steadyState(35); // fast but safe -- should read as clearly loud
+    const max = steadyState(50); // saturates at full pressure
+
+    expect(slow).toBeGreaterThan(0.05);
+    expect(slow).toBeLessThan(0.3);
+    expect(medium).toBeGreaterThan(0.3);
+    expect(medium).toBeLessThan(0.65);
+    expect(fast).toBeGreaterThan(0.6);
+    expect(fast).toBeLessThan(0.95);
+    expect(max).toBeCloseTo(1, 1);
+
+    // Strictly increasing and clearly separated -- this is the actual bug
+    // this pass fixes: medium and fast used to land close enough together
+    // that the difference wasn't reliably audible.
+    expect(medium - slow).toBeGreaterThan(0.15);
+    expect(fast - medium).toBeGreaterThan(0.15);
+  });
+
   it("dips effective pressure briefly on a direction reversal, without dropping to silence", () => {
     const bellows = new BellowsPressure();
     let now = 0;

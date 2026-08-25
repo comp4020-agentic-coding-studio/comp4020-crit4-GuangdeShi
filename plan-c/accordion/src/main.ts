@@ -12,6 +12,21 @@ renderKeyboard(
 const statusEl = document.querySelector<HTMLElement>("#sensor-status")!;
 const angleEl = document.querySelector<HTMLElement>("#debug-angle")!;
 const velocityEl = document.querySelector<HTMLElement>("#debug-velocity")!;
+const dynamicEl = document.querySelector<HTMLElement>("#debug-dynamic")!;
+
+// Tuning aid only (Section 9 of the bellows-expression pass): a rough
+// pp..ff label for the current pressure, so the dynamic range can be
+// sanity-checked by eye alongside the raw numbers -- not meant to be a
+// permanent/prominent part of the UI.
+function dynamicLabel(pressure: number): string {
+  if (pressure < 0.03) return "--";
+  if (pressure < 0.12) return "pp";
+  if (pressure < 0.28) return "p";
+  if (pressure < 0.45) return "mp";
+  if (pressure < 0.62) return "mf";
+  if (pressure < 0.85) return "f";
+  return "ff";
+}
 
 const sensor = new SensorClient();
 const bellows = new BellowsPressure();
@@ -38,6 +53,7 @@ function bellowsLoop(nowMs: number): void {
   const { pressure, direction } = bellows.update(latestVelocity, nowMs);
   engine.setBellows(pressure, direction);
   visuals.setBellows(pressure, direction);
+  dynamicEl.textContent = `${pressure.toFixed(2)} ${dynamicLabel(pressure)}`;
   requestAnimationFrame(bellowsLoop);
 }
 requestAnimationFrame(bellowsLoop);
