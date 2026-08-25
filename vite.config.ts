@@ -1,12 +1,18 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { defineConfig } from "vite";
+import { defaultExclude } from "vitest/config";
 
 // Every .html file in the repo is a page and a build entry, so a multi-page
 // hand-written site needs no build config: add pages, link them, ship.
 // (Vite's default would build only the root index.html and silently drop the
 // rest from dist/ — fine locally, 404s deployed.)
-const SKIP = new Set(["node_modules", "dist", "spec", "scripts", "reflections"]);
+// plan-c is a spike/investigation branch's own dev-only tooling (native
+// sensor bridge, throwaway experiment pages) -- it's reached directly via
+// `vite dev`, not shipped as part of the built multi-page site, so it's
+// excluded from the production build entries (and therefore from the
+// "every page" site invariants, which scan the built dist/ output).
+const SKIP = new Set(["node_modules", "dist", "spec", "scripts", "reflections", "plan-c"]);
 
 function htmlEntries(dir = "."): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -25,5 +31,13 @@ export default defineConfig({
     rollupOptions: {
       input: htmlEntries(),
     },
+  },
+  test: {
+    // .claude/ is gitignored machine-local state -- it can hold other,
+    // unrelated git worktrees (created by an earlier session's task) with
+    // their own copies of spec/*.test.ts, which vitest's default file
+    // discovery would otherwise pick up and run against a different
+    // branch's in-progress code.
+    exclude: [...defaultExclude, ".claude/**"],
   },
 });
