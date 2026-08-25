@@ -83,3 +83,56 @@ worked through on this same branch:
 
 See the commit history on `plan-c-mac-accordion` from this point forward for
 what actually changed.
+
+## Round 2: from "bellows makes noise" to a real piano-accordion model
+
+The first prototype had the instrument model itself backwards: moving the
+lid generated a standalone noise-burst sound, and that noise was scaled by
+bellows motion rather than gated by which reed(s) were actually open. A real
+accordion never works that way -- the keys select pitch, the bellows only
+supply air to whichever reed is already selected, and a moving bellows with
+no key held is silent. This round rebuilt the instrument around that model:
+
+- **`src/bellows.ts`** was rewritten from a `BellowsModel` (which mixed
+  pressure computation with the old noise-triggering logic) into a pure
+  `BellowsPressure` class: `|velocity|` -> dead-zone -> saturate -> smoothed
+  pressure, plus a direction-reversal "articulation dip" for the small
+  hiccup real bellows have when pull becomes push. It has no audio
+  dependency at all and is unit-tested directly (`bellows.test.ts`).
+- **`src/audio-engine.ts`** was rewritten from a flat `Voice` map + standalone
+  noise generator into `ReedBank` (fixed harmonic waveforms shared by every
+  note) + `NoteValve` (one held key's oscillator bank + envelope) +
+  `AccordionEngine`, which feeds every open `NoteValve` into one shared
+  `#airBus` gain node -- so `setBellows()` drives the loudness of every
+  currently-held note at once, and a note's oscillator `frequency` is set
+  once at valve construction and never touched by anything bellows-related.
+  There is no code path left that can produce sound from lid motion alone.
+- **Note-mapping / polyphony audit** (no bug found beyond what was already
+  fixed): re-checked `main.ts`'s key handling against the standard "silent
+  key" failure modes -- `event.key` vs `event.code`, case handling,
+  OS auto-repeat, envelope scheduling, voice lifecycle, and a bellows gate
+  that could accidentally mute specific notes. The `heldKeys` Set dedupes
+  auto-repeat, all key comparisons are consistently lowercased, `blur`
+  releases everything, and the prior session's `noteOn`/`reopen()`
+  retrigger fix carried over cleanly into the new `NoteValve` class. Since
+  every held note shares the *same* `#airBus`, "quiet at rest" is the
+  intended Section-2 behaviour (no bellows motion = no air = near-silence),
+  not a selective mute bug. Verified concretely with a throwaway Playwright
+  script (not part of this repo -- `playwright` isn't a project dependency)
+  that monkey-patched `AudioContext.prototype.createOscillator` to log every
+  oscillator actually created: all 25 rendered keys produced exactly 4
+  oscillators each when pressed individually, and a 3-note chord produced
+  exactly 12 simultaneously, with zero console/page errors.
+- **`keyboard.test.ts`** turns the "every visible key must be playable"
+  requirement into a standing automated check (no duplicate keys/notes,
+  every entry has a finite positive frequency, white/black classification
+  matches real piano geometry, strict chromatic ordering, and `KEY_TO_DEF`
+  has exactly one entry per `KEY_LAYOUT` entry) instead of a one-off manual
+  pass, so a future edit to the keyboard can't silently reintroduce a
+  mismatched or silent key.
+
+Manual listening (does it actually sound like an accordion reed, does
+pressure feel like air rather than a volume knob, does reversing bellows
+direction feel like a real hiccup rather than a glitch) is still owed and
+can only be done by ear against the running app -- see the commit history
+for what shipped, and test it locally with `pnpm dev`.
