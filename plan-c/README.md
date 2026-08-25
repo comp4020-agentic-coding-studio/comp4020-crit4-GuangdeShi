@@ -20,11 +20,14 @@ Sampling and movement run together, the same reader tracks the real hinge
 angle cleanly. `accordion/native/lid-reader.swift` +
 `accordion/bridge/server.mjs` now stream that live telemetry into the
 browser over a local WebSocket, driving a real piano-accordion model
-(`accordion/src/bellows.ts`, `accordion/src/audio-engine.ts`): the keyboard
-selects pitch, lid motion supplies bellows air/expression, and a still lid
-means silence.
+(root [`bellows.ts`](../bellows.ts), [`audio-engine.ts`](../audio-engine.ts)):
+the keyboard selects pitch, lid motion supplies bellows air/expression, and a
+still lid means silence. The same model also ships at the repo root as the
+deployed C4 instrument, with a pointer/touch drag fallback
+([`drag-bellows.ts`](../drag-bellows.ts)) for anyone opening the public URL
+without the native bridge running.
 
 Per the spike's own ground rules, no fake/simulated sensor input was ever
 substituted for the real one — the live prototype only exists because the
 real signal turned out to work. Plan A (`main`) and Plan B (`plan-b-drums`)
-remain untouched.
+remain untouched, preserved in git history and their own branches.

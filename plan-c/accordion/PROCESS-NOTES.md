@@ -175,3 +175,71 @@ kept the model exactly as-is and only widened the response:
 Checkpoint commit: `Plan C: checkpoint expressive MacBook accordion
 prototype`. See [`TOMORROW.md`](TOMORROW.md) for what's still owed (a real
 by-ear A/B listening pass against the running app) and where to pick back up.
+
+## Round 4: a public-fallback input mode, for the deployed page
+
+Everything above only makes sound on the one MacBook this was built against
+-- the deployed GitHub Pages copy has no native bridge to connect to, so a
+stranger opening the public URL could never make it produce a note. The
+requirement was explicit: build a *second input source* for the same
+instrument, not a second instrument, and don't let the two modes fight or
+require each other.
+
+- **`src/drag-bellows.ts`** is a new, pure `DragBellows` class with no DOM or
+  PointerEvent dependency (same reasoning as `bellows.ts`'s
+  `BellowsPressure`: the drag-to-velocity math should be testable directly,
+  not only by hand). It turns a `(clientY, timestampMs)` sample stream into
+  a signed velocity in the exact same deg/s units `BellowsPressure.update()`
+  already consumes -- dragging up is positive/PULL, down is negative/PUSH,
+  matching the lid sensor's own sign convention. Its scale factor
+  (`50 / 420`, px/s to deg/s) was derived from `bellows.ts`'s already-tuned
+  `DEAD_ZONE_DEG_PER_S`/`SATURATE_DEG_PER_S` constants rather than retuned
+  from scratch, so the fallback's dead-zone/saturation feel matches the
+  physical lid without a second manual-tuning pass. `drag-bellows.test.ts`
+  covers zero-before-drag, correct sign on both directions, saturation at a
+  brisk drag speed, staying under the dead zone on a slow one, extent
+  clamping at both ends of the visual range, dropping to zero the instant a
+  drag ends, treating a paused-but-not-released drag as stale after ~90ms,
+  and ignoring an out-of-order/duplicate timestamp instead of dividing by
+  ~zero.
+- **`src/main.ts`** picks between the two velocity sources with a single
+  boolean, `sensorConnected`, derived from `SensorClient`'s own reported
+  state (only `"connected"` counts -- both `"connecting"` and
+  `"disconnected"` default to the drag fallback, so a cold page load never
+  sits in an ambiguous "waiting for sensor" limbo). That one flag gates
+  which velocity `bellowsLoop` reads each frame *and* which input is allowed
+  to write the bellows' visual extent, so a stray pointer drag while the
+  real sensor happens to be connected is simply inert -- the sensor
+  interaction is never weakened or overridden, and dragging is never
+  required while it's live. `#mode-status` shows "LID BELLOWS -- hold a key,
+  move the screen." or "DRAG BELLOWS -- hold a key, drag the bellows."
+  depending on that same flag; there's no settings panel and no tutorial.
+- **`src/visuals.ts`**: `setAngle()` (the lid-sensor path) was refactored to
+  delegate to a new `setExtentPx()`, which the drag path now also calls
+  directly -- one shared visual-output seam for both input sources, per the
+  "do not duplicate the audio/render logic" requirement.
+- **Interaction quality** (`styles.css`, `main.ts`): the bellows element
+  itself is the entire drag target (no separate handle/slider), using
+  Pointer Events (`pointerdown`/`pointermove`/`pointerup`/`pointercancel`)
+  with explicit `setPointerCapture`/`releasePointerCapture`, `cursor: grab`
+  / `.grabbing`, and `touch-action: none` + `user-select: none` so a
+  touch-drag doesn't also scroll the page or select text.
+- **Verification.** A throwaway Playwright instance (`/tmp/c4-verify`, not a
+  project dependency) checked both required marking viewports
+  (1920x1080, 390x844) for horizontal overflow, the mode-status text/state,
+  and console/page errors. The first run showed "LID BELLOWS" / `connected`
+  at rest, which looked suspicious until `lsof -i :8765` and `ps aux` traced
+  it to a genuinely-still-running bridge process left over from an earlier
+  session's `pnpm accordion` -- not a bug, just a real physical-sensor
+  signal that happened to confirm physical mode still works correctly at
+  both viewports. Killing that stray process and re-running confirmed the
+  drag-fallback default state: no overflow, correct "DRAG BELLOWS" text,
+  the bellows at a sensible default height, and the only console message
+  the expected/benign WebSocket-connection-refused notice (never rendered
+  into the page's own UI). A second script then simulated real drag
+  gestures with a key held: silence with no drag, a soft reading on a slow
+  upward drag, a loud reading and correct `pull`/`push` direction flip on a
+  fast drag and its reversal, continued silence on a fast drag with *no*
+  key held, and a louder chord reading with three keys held plus a drag --
+  all with zero page errors, confirming the fallback drives the same
+  pressure/direction model the lid sensor does, not a second one.

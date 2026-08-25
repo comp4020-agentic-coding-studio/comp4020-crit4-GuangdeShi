@@ -1,486 +1,310 @@
+/* MacBook Accordion -- visual design.
+   A vintage, hand-crafted-feeling accordion in a vertical composition: a
+   large, dominant bellows on top (pearl-burgundy panel, brass trim) whose
+   real height and "breathing" glow track the physical lid's live angle and
+   velocity, with a smaller ivory/ebony keyboard manual below it.
+   The bellows visual is a *readout* of the sensor, not an input surface. */
+
+@font-face {
+  font-family: "Georgia-fallback";
+  src: local("Georgia");
+}
+
 :root {
-  color-scheme: dark;
+  --stage-bg-0: #14100d;
+  --stage-bg-1: #241a15;
+  --body-wine-0: #5a1420;
+  --body-wine-1: #3a0d16;
+  --body-wine-2: #7a2230;
+  --brass-0: #d9b56a;
+  --brass-1: #8a6a2e;
+  --ivory-0: #f6efdd;
+  --ivory-1: #ddd0ab;
+  --ebony-0: #2a2622;
+  --ebony-1: #100e0c;
+  --ink: #f1e9d8;
+  --ink-dim: #b8a98e;
+  --ok: #8fd19e;
+  --warn: #d98f7c;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  padding: 0;
-  font-family: system-ui, sans-serif;
-  line-height: 1.6;
-  color: #f4ecdf;
-  background: radial-gradient(ellipse at 50% 20%, #3a2f4d 0%, #201a2e 55%, #14101f 100%);
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  place-items: center;
+  padding: 3rem clamp(0.5rem, 3vw, 1.5rem);
+  font-family: Georgia, "Georgia-fallback", "Iowan Old Style", serif;
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse 60% 45% at 50% 38%, rgba(217, 181, 106, 0.12), transparent 70%),
+    radial-gradient(ellipse 120% 80% at 50% 0%, var(--stage-bg-1), var(--stage-bg-0) 70%);
 }
 
-a {
-  color: #ffd166;
-}
-
-header {
-  padding: 0.75rem 1.25rem;
-}
-
-header nav a {
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-main {
-  flex: 1;
+.stage {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: clamp(0.75rem, 2.5vh, 1.5rem);
-  padding: 1rem;
-}
-
-/* The title block: the first thing a stranger reads. Large, warm, and short
-   on purpose — one line of title, one line of invitation, nothing else. It
-   sits directly above the stage so the page reads as a single composition
-   (title, then the thing the title names) rather than a title bar plus an
-   unrelated page below it. */
-.hero {
-  text-align: center;
-  max-width: min(640px, 92vw);
-}
-
-.hero-title {
-  margin: 0;
-  font-size: clamp(2.25rem, 7vw, 4.25rem);
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  line-height: 1.05;
-  background: linear-gradient(135deg, #ffe29a 0%, #ffd166 45%, #ff9a76 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 4px 18px rgba(255, 209, 102, 0.25));
-}
-
-.hero-subtitle {
-  margin: 0.35rem 0 0;
-  font-size: clamp(0.95rem, 2vw, 1.25rem);
-  font-weight: 500;
-  color: rgba(244, 236, 223, 0.78);
-}
-
-/* The stage: a landscape composition, roughly the feel of a horizontal A4
-   page (1.414:1). Singers are positioned by percentage so the whole choir
-   scales together at any viewport width. */
-#stage {
-  position: relative;
-  width: min(1150px, 96vw);
-  aspect-ratio: 1.414 / 1;
-  margin: 0 auto;
-  border-radius: 1.25rem;
-  background:
-    radial-gradient(ellipse at 50% 15%, rgba(255, 209, 102, 0.16) 0%, transparent 55%),
-    linear-gradient(180deg, #2b2140 0%, #1c1730 60%, #120e1e 100%);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-  overflow: visible;
-  touch-action: manipulation;
-}
-
-#stage.has-hammer-cursor,
-#stage.has-hammer-cursor .singer {
-  cursor: none;
-}
-
-.singer {
-  position: absolute;
-  transform: translateX(-50%);
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  display: block;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.15s ease;
-}
-
-.singer:hover {
-  transform: translateX(-50%) translateY(-2%) scale(1.03);
-}
-
-/* Hover is the "come play with me" cue for a mouse/trackpad visitor: the
-   figure brightens (overriding its row's resting dim/shadow filter) and the
-   chest key label lifts out, both readable at a glance before any click. */
-.singer:hover .singer-fig {
-  filter: brightness(1.12) drop-shadow(0 10px 16px rgba(0, 0, 0, 0.5));
-}
-
-.singer:hover .chest-badge {
-  fill: rgba(0, 0, 0, 0.55);
-}
-
-.singer:hover .chest-letter {
-  fill: #fff8e6;
-  stroke: rgba(255, 209, 102, 0.9);
-}
-
-/* A quick radial flash behind the figure on hit — makes the first tap feel
-   like it landed, on top of the existing bounce/eyes/mouth reaction. */
-.singer::after {
-  content: "";
-  position: absolute;
-  inset: -12% -20%;
-  z-index: -1;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 209, 102, 0.55) 0%, rgba(255, 209, 102, 0) 70%);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.singer.is-hit::after {
-  animation: singer-hit-glow 0.45s ease-out;
-}
-
-@keyframes singer-hit-glow {
-  0% {
-    opacity: 0.8;
-    transform: scale(0.6);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.35);
-  }
-}
-
-.singer:focus-visible {
-  outline: 3px solid #ffd166;
-  outline-offset: 4px;
-  border-radius: 12px;
-}
-
-/* Row width/top are a function of depth only (not per-singer), so they live
-   here rather than in inline styles — that's what lets the mobile media
-   query below override them with normal cascade instead of !important.
-   The gap between back/middle/top and middle/front is sized so a row's
-   chest-letter zone (near the bottom of each figure) never falls inside the
-   row rendered in front of it — the generalised fix for the V1 occlusion
-   bug (2cdf745), now covering three depth layers instead of one lane. */
-.singer--back {
-  width: 13%;
-  top: 4%;
-}
-
-.singer--middle {
-  width: 17%;
-  top: 32%;
-}
-
-.singer--front {
-  width: 19%;
-  top: 60%;
-}
-
-.singer--back .singer-fig {
-  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.35)) brightness(0.94);
-}
-
-.singer--middle .singer-fig {
-  filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.4));
-}
-
-.singer--front .singer-fig {
-  filter: drop-shadow(0 12px 12px rgba(0, 0, 0, 0.45));
-}
-
-.singer-fig {
+  gap: 1.75rem;
   width: 100%;
-  height: auto;
-  display: block;
-  overflow: visible;
+  max-width: 720px;
 }
 
-/* A dark chip behind the chest letter, independent of the singer's own
-   clothing colour — without it, a light clothing colour (e.g. the pale pink
-   or cream some singers wear) leaves the white letter fill with almost no
-   contrast against it and the key label becomes unreadable. */
-.chest-badge {
-  fill: rgba(0, 0, 0, 0.32);
+.masthead {
+  text-align: center;
 }
 
-.chest-letter {
-  font: 700 34px/1 system-ui, sans-serif;
-  fill: rgba(255, 255, 255, 0.92);
-  paint-order: stroke;
-  stroke: rgba(0, 0, 0, 0.35);
-  stroke-width: 3px;
+.masthead h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
 }
 
-.eye {
-  fill: #221510;
+.tagline {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--ink-dim);
+  letter-spacing: 0.02em;
 }
 
-.eye-highlight {
-  fill: rgba(255, 255, 255, 0.85);
+/* ---------- accordion body ---------- */
+/* Vertical composition: a large, dominant bellows on top (the instrument's
+   visual heart, breathing with real lid angle/velocity) and a smaller
+   keyboard manual below it -- not the old horizontal bellows-left layout. */
+
+.accordion {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  width: clamp(300px, 94vw, 560px);
+  max-width: 100%;
+  border-radius: 18px;
+  overflow-x: auto; /* safety net; the clamp()/min() sizing below shouldn't need it */
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.55));
+  background:
+    radial-gradient(140% 90% at 50% 0%, var(--body-wine-2), var(--body-wine-0) 55%, var(--body-wine-1) 100%);
+  border: 2px solid var(--brass-1);
+  box-shadow:
+    inset 0 0 0 3px rgba(217, 181, 106, 0.25),
+    inset 0 2px 6px rgba(255, 255, 255, 0.08),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.35);
 }
 
-/* Blend rather than a flat fill, so the same warm tone reads as a blush
-   across every skin tone in the palette instead of sitting on top of it. */
-.cheek-blush {
-  fill: #ff8a73;
-  opacity: 0.22;
-  mix-blend-mode: multiply;
+.bellows-crown {
+  position: relative;
+  height: clamp(18px, 4vw, 28px);
+  flex-shrink: 0;
 }
 
-/* Prototype visual system (C4 pass 3): only the four singers carrying
-   .singer--v2 use any of this. Eyebrows give the idle face its first real
-   expression; the three-state mouth (idle -> small "o" -> open "ah") and an
-   independent head tilt replace the old instant idle/open swap and rigid
-   whole-figure bounce with something closer to an actual sung phrase. */
-.mouth-o {
-  opacity: 0;
+.bellows-crown .grille {
+  position: absolute;
+  top: 4px;
+  left: 12px;
+  width: clamp(20px, 5vw, 30px);
+  height: clamp(20px, 5vw, 30px);
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(circle, rgba(217, 181, 106, 0.5) 0 1.5px, transparent 1.5px 6px),
+    radial-gradient(circle, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.2) 70%);
+  border: 2px solid var(--brass-0);
 }
 
-.singer--v2.is-hit .mouth-idle {
-  animation: singer-mouth-idle-out 0.42s ease;
-}
-
-.singer--v2.is-hit .mouth-o {
-  animation: singer-mouth-o-pulse 0.42s ease;
-}
-
-.singer--v2.is-hit .mouth-open {
-  animation: singer-mouth-ah-pulse 0.42s ease;
-}
-
-@keyframes singer-mouth-idle-out {
-  0% {
-    opacity: 1;
-  }
-  20%,
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes singer-mouth-o-pulse {
-  0%,
-  100% {
-    opacity: 0;
-  }
-  20%,
-  50% {
-    opacity: 1;
-  }
-  65% {
-    opacity: 0;
-  }
-}
-
-@keyframes singer-mouth-ah-pulse {
-  0%,
-  50%,
-  100% {
-    opacity: 0;
-  }
-  65%,
-  90% {
-    opacity: 1;
-  }
-}
-
-.singer--v2.is-hit .head-group {
-  animation: singer-head-sing 0.42s ease;
-  transform-box: fill-box;
-  transform-origin: 50% 85%;
-}
-
-@keyframes singer-head-sing {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  30% {
-    transform: translateY(-3%) rotate(-4deg);
-  }
-  62% {
-    transform: translateY(1%) rotate(3deg);
-  }
-}
-
-/* Idle motion: a slow breathing bob on the whole figure, plus an occasional
-   blink, each singer offset by its own --bob-delay/--blink-delay (set per
-   singer in singers.ts) so sixteen singers don't move in unison — the
-   "someone is standing there, waiting" cue that invites the first tap. */
-.singer-fig {
-  animation: singer-idle-bob 4.6s ease-in-out infinite;
-  animation-delay: var(--bob-delay, 0s);
-}
-
-.eyes {
-  animation: singer-idle-blink 5.4s ease-in-out infinite;
-  animation-delay: var(--blink-delay, 0s);
-}
-
-@keyframes singer-idle-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-1.5%);
-  }
-}
-
-@keyframes singer-idle-blink {
-  0%,
-  92%,
-  100% {
-    transform: scaleY(1);
-  }
-  95% {
-    transform: scaleY(0.12);
-  }
-}
-
-/* Idle: closed/small mouth, eyes at rest. Triggered ("is-hit"): eyes widen,
-   mouth swaps to a wide-open shape, and the whole figure does a quick
-   squash-stretch-recoil bounce, then settles back to idle automatically
-   when the animation ends (see main.ts). */
-.mouth-open {
-  opacity: 0;
-}
-
-.singer.is-hit .mouth-idle {
-  opacity: 0;
-}
-
-.singer.is-hit .mouth-open {
-  opacity: 1;
-}
-
-.eyes {
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.singer.is-hit .eyes {
-  animation: singer-eyes-widen 0.4s ease;
-}
-
-.singer.is-hit .singer-fig {
-  animation: singer-bonk 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-}
-
-@keyframes singer-eyes-widen {
-  0% {
-    transform: scale(1);
-  }
-  25% {
-    transform: scale(1.55);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes singer-bonk {
-  0% {
-    transform: translateY(0) scale(1, 1) rotate(0deg);
-  }
-  18% {
-    transform: translateY(3%) scale(1.06, 0.9) rotate(-3deg);
-  }
-  45% {
-    transform: translateY(-4%) scale(0.96, 1.07) rotate(2.5deg);
-  }
-  70% {
-    transform: translateY(1%) scale(1.02, 0.98) rotate(-1deg);
-  }
-  100% {
-    transform: translateY(0) scale(1, 1) rotate(0deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .singer.is-hit .eyes,
-  .singer.is-hit .singer-fig,
-  .singer-fig,
-  .eyes,
-  .singer.is-hit::after,
-  .singer--v2.is-hit .mouth-idle,
-  .singer--v2.is-hit .mouth-o,
-  .singer--v2.is-hit .mouth-open,
-  .singer--v2.is-hit .head-group {
-    animation: none;
-  }
-}
-
-/* Cartoon hammer cursor: follows the pointer on devices with a fine
-   pointer (mouse/trackpad); touch and coarse pointers keep native taps. */
-#hammer {
-  position: fixed;
+.bellows-crown .strap {
+  position: absolute;
   top: 0;
-  left: 0;
-  width: 54px;
-  height: 54px;
-  pointer-events: none;
-  transform: translate(-6px, -46px) rotate(-20deg);
-  transform-origin: 20% 85%;
-  opacity: 0;
-  transition: opacity 0.12s ease;
-  z-index: 999;
-  background-repeat: no-repeat;
-  background-size: contain;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='28' y='26' width='8' height='34' rx='3' fill='%238a5a2f'/%3E%3Crect x='10' y='6' width='30' height='20' rx='4' fill='%23b8bec7'/%3E%3Crect x='10' y='6' width='30' height='7' rx='3' fill='%23dde2e8'/%3E%3C/svg%3E");
-  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.55));
+  right: 12px;
+  width: 34px;
+  height: 14px;
+  background: linear-gradient(180deg, var(--ebony-0), var(--ebony-1));
+  border: 1px solid var(--brass-1);
+  border-radius: 3px;
 }
 
-#hammer.visible {
-  opacity: 1;
+.bellows-crown .strap-right {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 26px;
 }
 
-@media (max-width: 640px) {
-  main {
-    padding: 0.5rem;
-    gap: 0.6rem;
-  }
+/* ---------- bellows (large, dominant, height-driven) ---------- */
 
-  .hero-subtitle {
-    margin-top: 0.2rem;
-  }
+.bellows {
+  --bellows-extent: 200px;
+  --bellows-pressure: 0;
+  /* min()'d against a viewport-relative cap so a JS-set extent can never
+     force the instrument taller than fits comfortably, no breakpoint needed.
+     Raised from an earlier 46vh/360px ceiling and 90px/150px floor -- the
+     bellows is the instrument's visual heart and should dominate the
+     composition even before the lid moves, not just once it's fully open. */
+  height: min(var(--bellows-extent), 58vh);
+  min-height: clamp(120px, 32vw, 190px);
+  max-height: 480px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px clamp(14px, 4vw, 26px);
+  transition: height 90ms linear;
+  box-shadow: inset 0 0 calc(10px + 24px * var(--bellows-pressure)) rgba(255, 208, 120, calc(0.1 + 0.35 * var(--bellows-pressure)));
+  /* Angular velocity -> motion intensity: a small side-to-side tremor whose
+     amplitude is driven by --bellows-pressure, so it's imperceptible at rest
+     and only visible while air is actually moving -- never a fixed idle
+     animation, which would read as the graphic making its own noise. */
+  animation: bellows-tremor 140ms ease-in-out infinite alternate;
+}
 
-  /* With 16 singers instead of 8, each row's rendered width shrinks on a
-     narrow phone screen. Rather than removing singers or scrolling, grow
-     each row's share of the stage (and the chest letter, which is sized in
-     the SVG's own viewBox units and so scales with it) so every figure and
-     its key label stay legible at phone width. */
-  .singer--back {
-    width: 17%;
-    top: 2%;
+@keyframes bellows-tremor {
+  from {
+    transform: translateX(calc(-1.5px * var(--bellows-pressure)));
   }
-
-  .singer--middle {
-    width: 21%;
-    top: 26%;
-  }
-
-  .singer--front {
-    width: 24%;
-    top: 54%;
-  }
-
-  .chest-letter {
-    font: 700 40px/1 system-ui, sans-serif;
+  to {
+    transform: translateX(calc(1.5px * var(--bellows-pressure)));
   }
 }
+
+.bellows .fold {
+  flex: 1;
+  border-left: 2px solid var(--brass-1);
+  border-right: 2px solid var(--brass-1);
+  background: linear-gradient(
+    190deg,
+    #b5883f 0%,
+    #7a5726 18%,
+    #4a3316 50%,
+    #7a5726 82%,
+    #b5883f 100%
+  );
+  background-size: 100% 220%;
+  clip-path: polygon(0% 18%, 100% 0%, 100% 82%, 0% 100%);
+  box-shadow: 0 0 calc(4px + 14px * var(--bellows-pressure)) rgba(255, 208, 120, calc(0.15 + 0.5 * var(--bellows-pressure)));
+}
+
+.accordion[data-direction="push"] .bellows .fold {
+  filter: brightness(calc(1 + 0.14 * var(--bellows-pressure)));
+}
+
+.accordion[data-direction="pull"] .bellows .fold {
+  filter: brightness(calc(1 - 0.1 * var(--bellows-pressure))) saturate(calc(1 + 0.25 * var(--bellows-pressure)));
+}
+
+/* ---------- keyboard (smaller manual, below the bellows) ---------- */
+
+.manual {
+  flex-shrink: 0;
+  padding: clamp(8px, 2.5vw, 14px) clamp(10px, 3vw, 20px) clamp(10px, 3vw, 16px);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.05));
+  border-top: 2px solid var(--brass-1);
+}
+
+.keyboard {
+  position: relative;
+  width: 100%;
+}
+
+.key-row {
+  display: flex;
+  width: 100%;
+}
+
+.white-row {
+  position: relative;
+  gap: 1.5px;
+}
+
+.black-row {
+  position: relative;
+  height: 0;
+}
+
+.key {
+  font-family: inherit;
+  cursor: pointer;
+  user-select: none;
+  border: none;
+  border-radius: 0 0 4px 4px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 4px;
+  font-size: 0.6rem;
+  letter-spacing: 0.02em;
+  transition: transform 60ms ease, box-shadow 60ms ease, background 60ms ease;
+}
+
+.key.white {
+  flex: 1;
+  height: clamp(58px, 15vw, 96px);
+  color: #6b5a3a;
+  background: linear-gradient(180deg, var(--ivory-0), var(--ivory-1));
+  border: 1px solid #a8996f;
+  box-shadow: 0 4px 0 #a8996f, 0 6px 8px rgba(0, 0, 0, 0.35);
+}
+
+.key.white.active,
+.key.white:active {
+  transform: translateY(3px);
+  color: #7a4a12;
+  box-shadow: 0 1px 0 #a8996f, 0 0 0 2px var(--brass-0), 0 0 14px 2px rgba(233, 178, 82, 0.7);
+  background: linear-gradient(180deg, #f3d9a0, #e9c67a);
+}
+
+.key.black {
+  position: absolute;
+  left: var(--offset);
+  width: 4.4%;
+  height: clamp(36px, 9vw, 58px);
+  color: var(--brass-0);
+  background: linear-gradient(180deg, var(--ebony-0), var(--ebony-1));
+  border: 1px solid #000;
+  box-shadow: 0 4px 0 #000, 0 6px 10px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+  font-size: 0.52rem;
+}
+
+.key.black.active,
+.key.black:active {
+  transform: translateY(3px);
+  color: #2a1c04;
+  box-shadow: 0 1px 0 #000, 0 0 0 2px var(--brass-0), 0 0 14px 3px rgba(233, 178, 82, 0.85);
+  background: linear-gradient(180deg, #e9c67a, #c9a227);
+}
+
+/* ---------- status + telemetry ---------- */
+
+.sensor-status {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+}
+
+.sensor-status[data-state="connected"] {
+  color: var(--ok);
+}
+
+.sensor-status[data-state="disconnected"],
+.sensor-status[data-state="connecting"] {
+  color: var(--warn);
+}
+
+.telemetry {
+  display: flex;
+  gap: 1.2rem;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.68rem;
+  color: rgba(241, 233, 216, 0.35);
+  letter-spacing: 0.02em;
+}
+
+/* No fixed-breakpoint overrides needed: the accordion body, bellows, and
+   key heights above all use clamp()/min() against vw units, so the whole
+   instrument scales fluidly down to phone widths. */

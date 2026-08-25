@@ -34,38 +34,43 @@ ship); CI runs the same plus links, secrets and the deploy. Read the failure.
 `spec/README.md`, `PROCESS.md` and `reflections/README.md` are in this repo and
 say what they are for.
 
-## This week: C4, "An instrument"
+## This week: C4, "An instrument" — MacBook Accordion
 
 The published spec at
 [crits/04-instrument](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/crits/04-instrument/)
 is the source of truth — re-read it before changing scope, not this summary.
+See [`plan-c/accordion/`](plan-c/accordion/) for the instrument itself and
+[`plan-c/accordion/PROCESS-NOTES.md`](plan-c/accordion/PROCESS-NOTES.md) for
+the detailed build history.
 
 - **The browser is the instrument.** Sound is synthesised live in the page by
-  the player, not played back. There is no separate "start" screen: the choir
-  is the first thing a stranger sees, and AudioContext is created lazily on
-  the player's first click/key press, not behind an onboarding step.
-- **No prerecorded vocal samples in V1.** Every voice is built from Web Audio
-  API primitives (oscillators, noise, filters, envelopes) until the convenor
-  clarifies whether isolated a cappella samples are allowed. Don't fetch or
-  bundle audio files for voices.
-- **No game mechanics.** No score, health, win/fail state, or anything that
-  frames hitting a singer as succeeding or failing. It's an instrument: hit a
-  character, they sing, they return to idle.
-- **Stay in the requested phase.** The four commits (setup, choir visual,
-  interaction, Web Audio) are deliberately staged — don't pull sequencer,
-  recording, or export work forward into V1 just because it would be easy
-  while already in the file.
-- **Test all three input paths by hand each session**: mouse click, keyboard
-  (including holding/rapid-repeating a key and multiple keys at once), and
-  touch (resize to a phone viewport or use dev-tools touch emulation). None of
-  this is covered by the automated spec tests below.
+  the player, not played back. There is no separate "start" screen, and
+  AudioContext is created lazily on the player's first key press or pointer
+  interaction, not behind an onboarding step.
+- **No prerecorded audio samples.** Every reed voice is built from Web Audio
+  API primitives (oscillators, filters, envelopes).
+- **No game mechanics.** No score, health, win/fail state.
+- **Two input modes, one instrument — never two.** The real MacBook lid
+  sensor (when the native bridge is connected) is the primary, intended
+  interaction on the hardware this was built for; pointer/touch dragging on
+  the visual bellows is the public-URL fallback for a stranger with no
+  native bridge. Both feed the identical `BellowsPressure`/`AccordionEngine`
+  model — never fork the audio logic per input source, and never require the
+  fallback drag while the sensor is connected.
+- **Keys select pitch, bellows supply air — never the reverse.** A moving
+  bellows with no key held must stay silent; bellows motion only controls
+  the loudness/expression of whatever note(s) are already held. Don't
+  reintroduce a standalone bellows noise.
+- **Test all input paths by hand each session**: physical keyboard, mouse and
+  touch/pointer on the visual piano keys, and the bellows itself both ways —
+  the lid sensor (if the native bridge is running) and pointer/touch drag.
+  None of this is covered by the automated spec tests below.
 - **Low latency and human listening judgement over automated proof.** A
-  passing test suite doesn't mean the synthesis sounds good or feels
-  responsive — say so explicitly rather than inferring audio quality from
-  green checks.
-- **Commit each of the four stages separately** (setup, choir visual,
-  interaction, Web Audio) rather than bundling the week into one commit — the
-  commit history is itself process evidence.
+  passing test suite doesn't mean the synthesis sounds like an accordion or
+  feels responsive — say so explicitly rather than inferring audio quality
+  from green checks.
+- **Commit meaningful stages separately** rather than bundling unrelated
+  changes into one commit — the commit history is itself process evidence.
 
 ## This file is yours
 

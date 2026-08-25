@@ -1,71 +1,102 @@
-import type { SingerRole } from "./singers";
-import { playRole } from "./audio";
+import { SensorClient } from "./sensor-client.ts";
+import { BellowsPressure } from "./bellows.ts";
+import { AccordionEngine } from "./audio-engine.ts";
+import { KEY_TO_DEF, renderKeyboard } from "./keyboard.ts";
+import { AccordionVisuals } from "./visuals.ts";
 
-const stage = document.querySelector<HTMLElement>("#stage");
-const hammer = document.querySelector<HTMLElement>("#hammer");
+renderKeyboard(
+  document.querySelector<HTMLElement>("#white-row")!,
+  document.querySelector<HTMLElement>("#black-row")!,
+);
 
-// The hammer cursor only makes sense for a real pointer; touch and coarse
-// pointers keep their native behaviour (there's nothing to follow).
-const hasFinePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+const statusEl = document.querySelector<HTMLElement>("#sensor-status")!;
+const angleEl = document.querySelector<HTMLElement>("#debug-angle")!;
+const velocityEl = document.querySelector<HTMLElement>("#debug-velocity")!;
+const dynamicEl = document.querySelector<HTMLElement>("#debug-dynamic")!;
 
-if (stage && hammer && hasFinePointer) {
-  stage.classList.add("has-hammer-cursor");
-  stage.addEventListener("pointermove", (event) => {
-    hammer.style.left = `${event.clientX}px`;
-    hammer.style.top = `${event.clientY}px`;
-  });
-  stage.addEventListener("pointerenter", () => hammer.classList.add("visible"));
-  stage.addEventListener("pointerleave", () => hammer.classList.remove("visible"));
+// Tuning aid only (Section 9 of the bellows-expression pass): a rough
+// pp..ff label for the current pressure, so the dynamic range can be
+// sanity-checked by eye alongside the raw numbers -- not meant to be a
+// permanent/prominent part of the UI.
+function dynamicLabel(pressure: number): string {
+  if (pressure < 0.03) return "--";
+  if (pressure < 0.12) return "pp";
+  if (pressure < 0.28) return "p";
+  if (pressure < 0.45) return "mp";
+  if (pressure < 0.62) return "mf";
+  if (pressure < 0.85) return "f";
+  return "ff";
 }
 
-// Every singer's keyboard mapping, keyed exactly as it appears in data-key
-// (so "A".."Z" and ";" all match event.key without further normalising).
-const singersByKey = new Map<string, HTMLElement>();
-document.querySelectorAll<HTMLElement>(".singer").forEach((el) => {
-  const key = el.dataset.key;
-  if (key) singersByKey.set(key, el);
+const sensor = new SensorClient();
+const bellows = new BellowsPressure();
+const engine = new AccordionEngine();
+const visuals = new AccordionVisuals(document);
+
+sensor.onStateChange((state) => {
+  statusEl.dataset.state = state;
+  statusEl.textContent = state === "connected" ? "Sensor connected" : "Waiting for MacBook sensor…";
 });
 
-// Retriggering mid-animation forces a reflow so the CSS animation restarts
-// from frame zero instead of being ignored — this is what makes rapid
-// repeated hits (holding a key, clicking fast) look like a fresh bonk each
-// time rather than a single animation that can't be interrupted.
-function triggerBonk(singer: HTMLElement) {
-  singer.classList.remove("is-hit");
-  void singer.offsetWidth;
-  singer.classList.add("is-hit");
+let latestVelocity = 0;
+
+sensor.onTelemetry(({ angle, velocity }) => {
+  latestVelocity = velocity;
+  visuals.setAngle(angle);
+  angleEl.textContent = `${angle.toFixed(1)}°`;
+  velocityEl.textContent = `${velocity >= 0 ? "+" : ""}${velocity.toFixed(1)}°/s`;
+});
+
+// Bellows pressure is recomputed every frame (not just on new telemetry) so
+// it keeps decaying smoothly between sensor samples instead of stair-stepping.
+function bellowsLoop(nowMs: number): void {
+  const { pressure, direction } = bellows.update(latestVelocity, nowMs);
+  engine.setBellows(pressure, direction);
+  visuals.setBellows(pressure, direction);
+  dynamicEl.textContent = `${pressure.toFixed(2)} ${dynamicLabel(pressure)}`;
+  requestAnimationFrame(bellowsLoop);
+}
+requestAnimationFrame(bellowsLoop);
+
+const heldKeys = new Set<string>();
+
+function pressKey(key: string): void {
+  const def = KEY_TO_DEF.get(key);
+  if (!def || heldKeys.has(key)) return; // ignore OS auto-repeat / already-held / unmapped
+  heldKeys.add(key);
+  visuals.setKeyPressed(key, true);
+  void engine.resume();
+  engine.noteOn(key, def.frequency);
 }
 
-// The single entry point for "this singer was hit" — visual reaction and
-// live synthesis fire together, from the same user gesture. This is also
-// where the AudioContext gets created on the very first hit of a session.
-function trigger(singer: HTMLElement) {
-  triggerBonk(singer);
-  const role = singer.dataset.role as SingerRole | undefined;
-  const pitch = Number(singer.dataset.pitch);
-  if (role && Number.isFinite(pitch)) playRole(role, pitch);
+function releaseKey(key: string): void {
+  if (!heldKeys.has(key)) return;
+  heldKeys.delete(key);
+  visuals.setKeyPressed(key, false);
+  engine.noteOff(key);
 }
 
-stage?.addEventListener("click", (event) => {
-  const singer = (event.target as HTMLElement).closest<HTMLElement>(".singer");
-  if (singer) trigger(singer);
-});
-
-// The animation lives on the inner .singer-fig; listen there and clear the
-// state on the outer button once it finishes.
-stage?.addEventListener("animationend", (event) => {
-  const target = event.target as HTMLElement;
-  if (target.classList.contains("singer-fig")) {
-    target.closest(".singer")?.classList.remove("is-hit");
-  }
-});
-
-// Global, not per-button: a singer sings when its letter is pressed
-// regardless of focus, and holding or rapid-repeating a key keeps
-// retriggering it — multiple keys held at once each drive their own singer
-// independently, so several can sound together.
 window.addEventListener("keydown", (event) => {
-  const key = event.key.length === 1 ? event.key.toUpperCase() : event.key;
-  const singer = singersByKey.get(key);
-  if (singer) trigger(singer);
+  // Modifier combos (Cmd+A "select all", etc.) are never note input --
+  // ignoring them here also stops the browser's own shortcut from firing
+  // alongside a note by accident.
+  if (event.metaKey || event.ctrlKey || event.altKey) return;
+  const key = event.key.toLowerCase();
+  if (!KEY_TO_DEF.has(key)) return;
+  event.preventDefault();
+  pressKey(key);
 });
+window.addEventListener("keyup", (event) => releaseKey(event.key.toLowerCase()));
+window.addEventListener("blur", () => {
+  for (const key of [...heldKeys]) releaseKey(key);
+});
+
+// Mouse/touch can also play the visual keys, alongside the physical keyboard.
+for (const [key, el] of visuals.keyElements) {
+  el.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    pressKey(key);
+  });
+  el.addEventListener("pointerup", () => releaseKey(key));
+  el.addEventListener("pointerleave", () => releaseKey(key));
+}
