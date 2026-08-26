@@ -1,11 +1,13 @@
 // Piano-accordion instrument model.
 //
-// The physical instrument this imitates works like this: the KEYBOARD
-// selects which reed/pitch is allowed to sound (a "valve" opening onto that
-// reed), and the BELLOWS supply the airflow that makes an open valve
-// audible -- airflow controls loudness/expression, never pitch. Holding a
-// key with a still bellows should be close to silent; the same key stays
-// exactly the same pitch whether the bellows are pushing or pulling.
+// Interaction model (revised): a key produces a base reed tone the instant
+// it's pressed -- pressing a key with a completely still bellows must still
+// be clearly audible, at a comfortable "mp" baseline. Bellows motion is an
+// EXPRESSIVE MODULATION on top of that baseline, not a gate: it pushes
+// loudness/brightness up toward "ff" and adds a small, restrained pitch
+// bend, but it never has to be moving for a held key to speak, and letting
+// it settle back to rest returns a held note to its baseline instead of
+// silence.
 //
 // That maps onto three pieces here:
 //   - ReedBank    the fixed harmonic "instrument" -- the waveforms shared by
@@ -19,9 +21,10 @@
 //                 every open reed at once (Section 15: bellows is a GLOBAL
 //                 expression source, not per-note).
 //
-// There is deliberately no standalone "bellows noise" here: moving the
-// screen with no key held must be silent, because on a real accordion
-// airflow with no open reed makes no note either.
+// There is still no standalone "bellows noise": moving the screen with no
+// key held stays silent, because there's no open valve for that shared air
+// bus to feed -- the change is only that an *open* valve no longer needs
+// moving air to be heard.
 
 // Harmonic content of the main 8' reed rank: strong fundamental with
 // carefully *unequal* partials, not a flat/equal spectrum (that reads as a
@@ -62,15 +65,22 @@ const LOW_NOTE_REFERENCE_FREQUENCY_HZ = 261.63; // C4
 const LOW_NOTE_MAX_ATTACK_SCALE = 1.3;
 
 const AIR_BUS_SMOOTH_TIME_S = 0.03;
-// A held note should still speak *faintly* the instant bellows pressure
-// crosses the dead zone (like a real reed catching residual air), but a
-// motionless bellows must stay silent -- see the pressure>0 gate below.
-// Pulled down further from an earlier 0.045: paired with the reshaped
-// velocity->pressure curve in bellows.ts, this is what actually makes slow
-// lid motion read as "soft" rather than "almost the same as medium" --
-// the whole point of this pass is a wide, obvious pp-to-ff swing, and a
-// floor this low is most of how that's achieved.
-const AIR_BUS_MIN_GAIN_WHEN_MOVING = 0.02;
+// A held key must speak on its own at a comfortable, clearly-audible "mp"
+// level with the bellows completely at rest -- this is the floor the old
+// "silent unless moving" gate used to enforce, now repurposed as the
+// baseline every note starts from. Bellows pressure then scales *up* from
+// here toward 1 at full pressure, so the pp..ff swing survives as "baseline
+// -> louder/brighter," not "silence -> present."
+const AIR_BUS_BASELINE_GAIN = 0.55;
+
+// Small, restrained bellows-driven pitch expression (Section 3): PULL bends
+// a touch sharp, PUSH a touch flat, scaled by pressure so a bare dead-zone
+// crossing barely nudges it and full-speed motion reaches the edge of the
+// range. Deliberately asymmetric and both sides small enough that the note
+// never reads as a different pitch -- only as "alive."
+const PITCH_BEND_PULL_CENTS_MAX = 15;
+const PITCH_BEND_PUSH_CENTS_MAX = -10;
+const PITCH_BEND_SMOOTH_TIME_S = 0.04;
 
 // Pressure-driven brightness: independent of push/pull direction, a harder
 // bellows push should sound brighter/richer, not just louder -- real
@@ -89,7 +99,7 @@ const DIRECTIONAL_BODY_FREQUENCY_HZ_RANGE = 500;
 // several open reeds (main + sub-octave, possibly a full chord) from
 // clipping, this brings the overall level back up to something that
 // actually reads as "present" rather than thin.
-const MASTER_GAIN = 1.6;
+const MASTER_GAIN = 1;
 
 // Final safety stage, placed after MASTER_GAIN, right before the
 // destination. The bus compressor above is deliberately gentle (ratio 2)
@@ -104,7 +114,7 @@ const MASTER_GAIN = 1.6;
 // SOFT_CLIP_KNEE, smoothly saturating toward ~1 above it, so ordinary
 // playing is untouched and only genuine sample peaks get caught --
 // without the harsh, brittle-sounding corner a hard clip would add.
-const LIMITER_THRESHOLD_DB = -1;
+const LIMITER_THRESHOLD_DB = 0;
 const LIMITER_RATIO = 20;
 const SOFT_CLIP_KNEE = 0.85;
 
@@ -171,7 +181,10 @@ class ReedBank {
  */
 class NoteValve {
   #ctx: AudioContext;
-  #oscillators: OscillatorNode[] = [];
+  // Each oscillator keeps its own fixed musette detune alongside the node,
+  // so a live pitch-bend update (setPitchBend) can recompute
+  // `baseDetuneCents + bendCents` without losing the original tuning.
+  #oscillators: { node: OscillatorNode; baseDetuneCents: number }[] = [];
   #gain: GainNode;
   #stopTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -191,7 +204,7 @@ class NoteValve {
       osc.detune.value = cents;
       osc.connect(this.#gain);
       osc.start(now);
-      this.#oscillators.push(osc);
+      this.#oscillators.push({ node: osc, baseDetuneCents: cents });
     }
 
     const subGain = ctx.createGain();
@@ -202,7 +215,19 @@ class NoteValve {
     subOsc.frequency.value = frequency * Math.pow(2, SUB_OCTAVE_SEMITONES / 12);
     subOsc.connect(subGain);
     subOsc.start(now);
-    this.#oscillators.push(subOsc);
+    this.#oscillators.push({ node: subOsc, baseDetuneCents: 0 });
+  }
+
+  /**
+   * Nudges every oscillator's detune by `bendCents` on top of its own fixed
+   * musette tuning (Section 3) -- a small, live pitch expression driven by
+   * bellows direction/speed. Smoothed rather than snapped so direction
+   * reversals don't click.
+   */
+  setPitchBend(bendCents: number, now: number): void {
+    for (const { node, baseDetuneCents } of this.#oscillators) {
+      node.detune.setTargetAtTime(baseDetuneCents + bendCents, now, PITCH_BEND_SMOOTH_TIME_S);
+    }
   }
 
   /** True while this valve is fully open (key still held, not mid-release). */
@@ -229,9 +254,9 @@ class NoteValve {
     this.#gain.gain.setValueAtTime(this.#gain.gain.value, now);
     this.#gain.gain.linearRampToValueAtTime(0, now + NOTE_RELEASE_S);
     this.#stopTimeout = setTimeout(() => {
-      for (const osc of this.#oscillators) {
-        osc.stop();
-        osc.disconnect();
+      for (const { node } of this.#oscillators) {
+        node.stop();
+        node.disconnect();
       }
       this.#gain.disconnect();
       onFinished();
@@ -284,7 +309,7 @@ export class AccordionEngine {
     // back out. This only meaningfully engages on genuinely loud moments
     // (a full-pressure chord), not on ordinary single-note dynamics.
     this.#compressor = this.#ctx.createDynamicsCompressor();
-    this.#compressor.threshold.value = -9;
+    this.#compressor.threshold.value = -4;
     this.#compressor.knee.value = 8;
     this.#compressor.ratio.value = 2;
     this.#compressor.attack.value = 0.003;
@@ -313,25 +338,39 @@ export class AccordionEngine {
     this.#softClip.connect(this.#ctx.destination);
   }
 
-  /** Resumes the AudioContext; must be called from a user gesture (keydown). */
+  /**
+   * Resumes the AudioContext and only returns once it's actually running.
+   * Must be called from a user gesture (keydown/pointerdown), and callers
+   * must await it before triggering a note -- on Safari in particular,
+   * `resume()` can still be settling when the very next line runs, so a
+   * fire-and-forget `void engine.resume()` followed immediately by
+   * `noteOn()` can race a context that hasn't unlocked yet and drop the
+   * first note. `state !== "running"` (rather than just "suspended") also
+   * covers Safari's "interrupted" state.
+   */
   async resume(): Promise<void> {
-    if (this.#ctx.state === "suspended") await this.#ctx.resume();
+    if (this.#ctx.state !== "running") await this.#ctx.resume();
   }
 
   /**
-   * Bellows state only ever changes loudness/expression here -- never
-   * pitch (Section 13). `pressure` and `direction` come from BellowsPressure
-   * in bellows.ts, which derives them from lid angular velocity.
+   * Bellows state never changes which pitch is playing (Section 13) -- it
+   * shapes how expressive an already-sounding key's baseline tone is:
+   * louder, brighter, and with a small directional pitch bend, scaling up
+   * from the "mp" baseline in AIR_BUS_BASELINE_GAIN rather than up from
+   * silence. `pressure` and `direction` come from BellowsPressure in
+   * bellows.ts, which derives them from lid angular velocity (or the drag
+   * fallback's synthetic velocity).
    * @param pressure 0..1 bellows pressure.
    * @param direction -1 (push) / 0 (rest) / 1 (pull) -- colours the tone subtly.
    */
   setBellows(pressure: number, direction: -1 | 0 | 1): void {
     this.#currentPressure = pressure;
     const now = this.#ctx.currentTime;
-    // A silent, motionless bellows must mean silence, full stop -- there is
-    // no "idle hum" here, unlike a note freshly struck under real pressure.
-    const audibleGain = AIR_BUS_MIN_GAIN_WHEN_MOVING + pressure * (1 - AIR_BUS_MIN_GAIN_WHEN_MOVING);
-    this.#airBus.gain.setTargetAtTime(pressure > 0.001 ? audibleGain : 0, now, AIR_BUS_SMOOTH_TIME_S);
+    // Baseline "mp" level with the bellows fully at rest, scaling up toward
+    // 1 (full "ff") as pressure rises -- an open valve is always audible
+    // here; there's no pressure threshold that drops it to silence.
+    const audibleGain = AIR_BUS_BASELINE_GAIN + pressure * (1 - AIR_BUS_BASELINE_GAIN);
+    this.#airBus.gain.setTargetAtTime(audibleGain, now, AIR_BUS_SMOOTH_TIME_S);
 
     // Timbre changes with bellows pressure, not just loudness -- soft
     // bellows should sound darker/smoother, hard bellows brighter/more
@@ -344,6 +383,14 @@ export class AccordionEngine {
       BODY_FREQUENCY_AT_REST_HZ + pressure * PRESSURE_BODY_FREQUENCY_HZ_RANGE + direction * DIRECTIONAL_BODY_FREQUENCY_HZ_RANGE * pressure;
     this.#brightnessFilter.gain.setTargetAtTime(brightnessTarget, now, AIR_BUS_SMOOTH_TIME_S);
     this.#bodyFilter.frequency.setTargetAtTime(bodyFreqTarget, now, AIR_BUS_SMOOTH_TIME_S);
+
+    // Subtle pitch expression (Section 3): pull bends a touch sharp, push a
+    // touch flat, scaled by pressure so it's barely there at low pressure
+    // and reaches its small max at full speed. Applied to every currently
+    // open-or-releasing valve so a held chord bends together.
+    const bendCentsMax = direction === 1 ? PITCH_BEND_PULL_CENTS_MAX : direction === -1 ? PITCH_BEND_PUSH_CENTS_MAX : 0;
+    const bendCents = bendCentsMax * pressure;
+    for (const valve of this.#valves.values()) valve.setPitchBend(bendCents, now);
   }
 
   /** Opens the valve for `id`/`frequency` (key down). Retriggers in place if the same key was still releasing. */

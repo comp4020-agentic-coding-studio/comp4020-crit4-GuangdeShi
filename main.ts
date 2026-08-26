@@ -78,12 +78,18 @@ requestAnimationFrame(bellowsLoop);
 
 const heldKeys = new Set<string>();
 
-function pressKey(key: string): void {
+// A key must always produce sound by itself (Section 1/12) -- resume() is
+// awaited and confirmed before noteOn() fires, rather than fired-and-forgotten
+// alongside it, so a still-unlocking AudioContext (Safari in particular can
+// still be settling `resume()` here) can't silently swallow the very first
+// note of the session.
+async function pressKey(key: string): Promise<void> {
   const def = KEY_TO_DEF.get(key);
   if (!def || heldKeys.has(key)) return; // ignore OS auto-repeat / already-held / unmapped
   heldKeys.add(key);
   visuals.setKeyPressed(key, true);
-  void engine.resume();
+  await engine.resume();
+  if (!heldKeys.has(key)) return; // released again before the (first-ever) resume settled
   engine.noteOn(key, def.frequency);
 }
 
