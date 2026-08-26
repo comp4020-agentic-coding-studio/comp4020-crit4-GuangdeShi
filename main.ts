@@ -49,9 +49,11 @@ let sensorConnected = false;
 sensor.onStateChange((state) => {
   sensorConnected = state === "connected";
   modeStatusEl.dataset.state = state;
+  // Keys already sound on their own -- this copy only describes what the
+  // bellows add, never implies they're required for sound at all.
   modeStatusEl.textContent = sensorConnected
-    ? "LID BELLOWS — hold a key, move the screen."
-    : "DRAG BELLOWS — hold a key, drag the bellows.";
+    ? "LID BELLOWS — play the keys, move the screen to shape the sound."
+    : "DRAG BELLOWS — play the keys, drag the bellows to shape the sound.";
 });
 
 let latestVelocity = 0;
