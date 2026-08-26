@@ -243,3 +243,68 @@ require each other.
   key held, and a louder chord reading with three keys held plus a drag --
   all with zero page errors, confirming the fallback drives the same
   pressure/direction model the lid sensor does, not a second one.
+
+## Round 5: final interaction correction -- keys must sound on their own
+
+Everything through Round 4 preserved Round 2's original model faithfully:
+keys select pitch, the bellows supply air, and a key held with a still
+bellows stays near-silent. Manually playing the shipped instrument (not a
+test -- a person pressing a key and listening) showed that model itself was
+the problem: a still-bellows key press read as *broken*, not *quiet*, to
+anyone who hadn't already read the source. An accordion reed sounds the
+instant its valve opens; the bellows shape how it sounds, they don't decide
+whether it sounds at all. That's the correction this round makes.
+
+- **`src/audio-engine.ts`**: `setBellows()`'s air-bus gain changed from
+  `pressure > deadzone ? loud : AIR_BUS_MIN_GAIN_WHEN_MOVING` (effectively
+  silent at rest) to `AIR_BUS_BASELINE_GAIN + pressure * (1 -
+  AIR_BUS_BASELINE_GAIN)` -- a fixed, always-on "mp" baseline that bellows
+  pressure adds *on top of*, never a floor pressure has to clear before
+  anything is audible. `NoteValve` also gained a small pitch-bend path: each
+  oscillator now carries its fixed musette `baseDetuneCents` separately from
+  a live `bendCents` driven by bellows pressure and push/pull direction
+  (-10 to +15 cents, recombined via `detune.setTargetAtTime` each frame),
+  so fast bellows motion adds a subtle expressive wobble without transposing
+  the note.
+- **A second, genuine dynamic-range bug found the same way the Round 3
+  clipping bug was found -- by tapping the actual output, not by ear.** The
+  existing safety chain (compressor -> master gain -> limiter -> soft-clip)
+  had been tuned around the old near-silent baseline, where only occasional
+  full-pressure chords needed squashing. Under the new, much louder
+  baseline, that same chain crushed nearly the entire pp->ff swing of
+  ordinary single-note play down to under 1dB of audible difference at the
+  final output -- confirmed by comparing an `AnalyserNode` tapped right
+  before `ctx.destination` against a second one tapped right before the
+  first compressor, which showed a healthy pre-limiter swing being erased
+  downstream. Fixed by lowering `MASTER_GAIN` (1.6 -> 1) and raising the
+  compressor threshold (-9 -> -4dB) and limiter threshold (-1 -> 0dB),
+  restoring a clear, measurable baseline-to-full-pressure swing (~0.27 RMS
+  at rest vs ~0.44-0.55 RMS under fast bellows, averaged over a
+  musette-beat-length window) while re-checking the original chord-clipping
+  scenario still holds: a 6-note chord at full bellows pressure peaks at
+  0.965 with zero samples over 0.98, so the loosened margins didn't reopen
+  Round 3's problem.
+- **`src/main.ts`**: `pressKey()` now awaits `engine.resume()` (re-checking
+  the key is still held afterward) instead of firing `resume()` and
+  `noteOn()` concurrently, closing a race where a still-settling
+  `AudioContext` (observed on Safari, which also exposes an "interrupted"
+  state distinct from "suspended") could swallow the very first note of a
+  session. Mode-status copy changed from "hold a key, move/drag the
+  bellows" to "play the keys, move/drag the bellows to shape the sound",
+  since the old wording implied a key alone made no sound.
+- **Verification.** A Playwright script tapped both the pre- and
+  post-safety-chain output with `AnalyserNode`s (patching
+  `AudioNode.prototype.connect` from outside the page, so it proves what
+  actually reaches the speakers rather than reading private engine state)
+  and drove the physical-keyboard path (`page.keyboard.down/up`) concurrently
+  with mouse-dragged bellows, confirming: a key alone produces sound at a
+  measurable RMS with telemetry reading `0.00 --`; slow sustained bellows
+  raises it to `mp`; fast sustained bellows raises it further to `f`/`ff`;
+  releasing the bellows with the key still held decays back toward the same
+  baseline level rather than to silence; and `pull`/`push` drags correctly
+  flip the reported direction. Both bellows inputs -- lid sensor and
+  pointer/touch drag -- were left structurally untouched (`bellows.ts`,
+  `drag-bellows.ts`, `visuals.ts`, `keyboard.ts` needed no changes): this
+  round is a correction to what the shared engine does with pressure, not a
+  change to how pressure is measured or which input supplies it. Final
+  design: one instrument, two bellows interfaces.

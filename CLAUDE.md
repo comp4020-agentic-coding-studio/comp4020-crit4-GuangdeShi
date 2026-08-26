@@ -57,10 +57,15 @@ the detailed build history.
   native bridge. Both feed the identical `BellowsPressure`/`AccordionEngine`
   model — never fork the audio logic per input source, and never require the
   fallback drag while the sensor is connected.
-- **Keys select pitch, bellows supply air — never the reverse.** A moving
-  bellows with no key held must stay silent; bellows motion only controls
-  the loudness/expression of whatever note(s) are already held. Don't
-  reintroduce a standalone bellows noise.
+- **Keys select pitch and are always audible on their own; bellows are
+  expressive modulation, never a gate.** Pressing a key must produce a
+  clearly audible note at a baseline "mp" level with the bellows
+  completely still — a still-bellows key must never be silent or near-
+  silent. Bellows motion then pushes loudness/brightness up toward "ff"
+  and adds a small pitch bend on top of that baseline; it never controls
+  *whether* a held note sounds, only how expressive it is. A moving
+  bellows with no key held must still stay silent — don't reintroduce a
+  standalone bellows noise.
 - **Test all input paths by hand each session**: physical keyboard, mouse and
   touch/pointer on the visual piano keys, and the bellows itself both ways —
   the lid sensor (if the native bridge is running) and pointer/touch drag.

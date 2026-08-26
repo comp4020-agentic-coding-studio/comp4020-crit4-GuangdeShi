@@ -1,20 +1,22 @@
 # MacBook Accordion
 
-A piano-accordion model where the physical keyboard picks the pitch and the
-bellows supply air. There are **two ways to supply that air**, feeding the
-same instrument:
+A piano-accordion model where the physical keyboard picks the pitch —
+pressing a key sounds a note immediately, on its own — and the bellows are
+an expressive controller on top of that: they shape the note's loudness,
+timbre and a small pitch bend, never whether it sounds at all. There are
+**two bellows interfaces**, feeding the same instrument:
 
 - **Public URL (no install required).** Anyone opening the deployed page —
   a stranger with no native software — plays it with the physical keyboard
   or on-screen piano keys for pitch, and drags the large visual bellows with
-  mouse, touch, or pen for bellows air. This is the fallback mode and is
-  what runs automatically whenever the native sensor bridge below isn't
-  connected.
+  mouse, touch, or pen to shape the sound further. This is the fallback mode
+  and is what runs automatically whenever the native sensor bridge below
+  isn't connected.
 - **Full physical version (this MacBook only).** With the native lid-sensor
-  bridge running, the real screen hinge becomes the bellows instead — move
-  the actual lid, don't drag on screen. Playable only on a MacBook with the
-  lid-angle HID node this was built against (tested: MacBook Air, Mac15,12 /
-  Apple M3). Requires `pnpm accordion` (below); see
+  bridge running, the real screen hinge becomes the expressive bellows
+  instead — move the actual lid, don't drag on screen. Playable only on a
+  MacBook with the lid-angle HID node this was built against (tested:
+  MacBook Air, Mac15,12 / Apple M3). Requires `pnpm accordion` (below); see
   [`PROCESS-NOTES.md`](PROCESS-NOTES.md) for how that sensor was confirmed
   to work, and [`TOMORROW.md`](TOMORROW.md) for current state and next
   steps.
@@ -71,10 +73,11 @@ Then open the same URL above.
 
 - Physical keyboard keys, or clicking/tapping the on-screen piano keys, pick
   notes across a C3–C5 chromatic range (see root [`keyboard.ts`](../../keyboard.ts)
-  for the exact layout). A held key with no bellows air is close to silent,
-  by design — bellows air alone, with no key held, is silent too.
+  for the exact layout). A held key sounds immediately at a steady "mp"
+  level even with the bellows completely still — bellows motion with no key
+  held stays silent, by design, but a still-bellows key never is.
 - **Full physical mode** (bridge connected): move the actual laptop lid to
-  supply bellows air.
+  shape the held note's loudness, tone and pitch expression.
   - **Safe lid range**: keep well inside the hinge's normal open range.
     Don't force it flat/closed to chase more "pressure" — full closure will
     put the machine to sleep, and near-closure hasn't been part of the
@@ -90,7 +93,8 @@ Then open the same URL above.
   vertically. Dragging up expands it (PULL), dragging down compresses it
   (PUSH); how fast you move it, not how far, is what drives loudness and
   brightness — a slow drag reads soft, a fast one reads loud, and releasing
-  lets it settle back to silence.
+  lets it settle back to the same baseline the key was already sounding at,
+  not to silence.
 - Which mode is live is shown in the small status line under the
   instrument ("LID BELLOWS" or "DRAG BELLOWS") — chosen automatically, no
   settings panel. If the sensor bridge isn't running (or the WebSocket

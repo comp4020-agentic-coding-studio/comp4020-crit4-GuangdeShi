@@ -21,8 +21,9 @@ angle cleanly. `accordion/native/lid-reader.swift` +
 `accordion/bridge/server.mjs` now stream that live telemetry into the
 browser over a local WebSocket, driving a real piano-accordion model
 (root [`bellows.ts`](../bellows.ts), [`audio-engine.ts`](../audio-engine.ts)):
-the keyboard selects pitch, lid motion supplies bellows air/expression, and a
-still lid means silence. The same model also ships at the repo root as the
+the keyboard selects pitch and every key is audible on its own, and lid
+motion shapes that note's loudness, timbre and a small pitch expression on
+top of the baseline. The same model also ships at the repo root as the
 deployed C4 instrument, with a pointer/touch drag fallback
 ([`drag-bellows.ts`](../drag-bellows.ts)) for anyone opening the public URL
 without the native bridge running.
